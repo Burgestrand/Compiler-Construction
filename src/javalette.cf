@@ -5,76 +5,81 @@ comment    "//";
 comment    "/*" "*/";
 
 entrypoints Program;
-Program.    Program ::= [TopDef];
+Program.    Program ::= [Definition];
 Arg. 	      Arg ::= Type Ident;
 separator   Arg ",";
 
-FnDef.	           TopDef ::= Type Ident "(" [Arg] ")" Block;
-separator nonempty TopDef "";
+Definition.	       Definition ::= Type Ident "(" [Arg] ")" Block;
+separator nonempty Definition "";
 
 -- statements ----------------------------------------------
 
-Block.     Block ::= "{" [Stmt] "}";
+Block. Block ::= "{" [Statement] "}";
 
-separator Stmt "";
-Empty.    Stmt ::= ";";
-BStmt.    Stmt ::= Block;
-Decl.     Stmt ::= Type [Item] ";";
-Ret.      Stmt ::= "return" Expr ";";
-VRet.     Stmt ::= "return" ";";
-Cond.     Stmt ::= "if" "(" Expr ")" Stmt;
-CondElse. Stmt ::= "if" "(" Expr ")" Stmt "else" Stmt;
-While.    Stmt ::= "while" "(" Expr ")" Stmt;
-SExp.     Stmt ::= Expr ";";
+separator     Statement "";
+SEmpty.       Statement ::= ";";
+SBlock.       Statement ::= Block;
+SDeclaration. Statement ::= Type [Declaration] ";";
+SReturn.      Statement ::= "return" Expr ";";
+SReturnV.     Statement ::= "return" ";";
+SIf.          Statement ::= "if" "(" Expr ")" Statement;
+SIfElse.      Statement ::= "if" "(" Expr ")" Statement "else" Statement;
+SWhile.       Statement ::= "while" "(" Expr ")" Statement;
+SExpr.        Statement ::= Expr ";";
 
-NoInit.            Item ::= Ident; 
-Init.              Item ::= Ident "=" Expr;
-separator nonempty Item ",";
+DNoInit.           Declaration ::= Ident; 
+DInit.             Declaration ::= Ident "=" Expr;
+separator nonempty Declaration ",";
 
 -- Types ---------------------------------------------------
 
-Int.            Type ::= "int";
-Doub.           Type ::= "double";
-Bool.           Type ::= "boolean";
-Void.           Type ::= "void";
-internal   Fun. Type ::= Type "(" [Type] ")";
-separator       Type ",";
+TInt.          Type ::= "int";
+TDoub.         Type ::= "double";
+TBool.         Type ::= "boolean";
+TVoid.         Type ::= "void";
+internal TFun. Type ::= Type "(" [Type] ")";
+separator      Type ",";
 
 
 -- Expressions ---------------------------------------------
 
 
-EIncr.     Expr7 ::= Ident "++";
-EDecr.     Expr7 ::= Ident "--";
+EInc.      Expr7 ::= Ident "++";
+EDec.      Expr7 ::= Ident "--";
 EVar.      Expr7 ::= Ident;
-ELitInt.   Expr7 ::= Integer;
-ELitDoub.  Expr7 ::= Double;
-ELitTrue.  Expr7 ::= "true";
-ELitFalse. Expr7 ::= "false";
-EApp.      Expr7 ::= Ident "(" [Expr] ")";
+EInt.      Expr7 ::= Integer;
+EDouble.   Expr7 ::= Double;
+EBool.     Expr7 ::= Bool;
+ECall.     Expr7 ::= Ident "(" [Expr] ")";
 EString.   Expr7 ::= String;
-Neg.       Expr6 ::= "-" Expr7;
-Not.       Expr6 ::= "!" Expr7;
+ENeg.      Expr6 ::= "-" Expr7;
+ENot.      Expr6 ::= "!" Expr7;
 EMul.      Expr5 ::= Expr5 MulOp Expr6;
 EAdd.      Expr4 ::= Expr4 AddOp Expr5;
+EEqu.      Expr3 ::= Expr3 EquOp Expr4;
 ERel.      Expr3 ::= Expr3 RelOp Expr4;
 EAnd.      Expr2 ::= Expr3 "&&" Expr2;
 EOr.       Expr1 ::= Expr2 "||" Expr1;
-Ass.       Expr  ::= Ident "=" Expr ";";
+EAss.      Expr  ::= Ident "=" Expr;
 coercions  Expr 7;
 separator  Expr ",";
 
+LTrue.  Bool ::= "true";
+LFalse. Bool ::= "false";
 
 -- operators -----------------------------------------------
 
 Plus.  AddOp ::= "+";
 Minus. AddOp ::= "-";
+
 Times. MulOp ::= "*";
 Div.   MulOp ::= "/";
 Mod.   MulOp ::= "%";
+
+EQU.   EquOp ::= "==";
+NE.    EquOp ::= "!=";
+
 LTH.   RelOp ::= "<";
 LE.    RelOp ::= "<=";
 GTH.   RelOp ::= ">";
 GE.    RelOp ::= ">=";
-EQU.   RelOp ::= "==";
-NE.    RelOp ::= "!=";
