@@ -49,7 +49,7 @@ EDec.      Expr7 ::= Ident "--";
 EVar.      Expr7 ::= Ident;
 EInt.      Expr7 ::= Integer;
 EDouble.   Expr7 ::= Double;
-EBool.     Expr7 ::= Bool;
+EBool.     Expr7 ::= LBool;
 ECall.     Expr7 ::= Ident "(" [Expr] ")";
 EString.   Expr7 ::= String;
 ENeg.      Expr6 ::= "-" Expr7;
@@ -64,8 +64,8 @@ EAss.      Expr  ::= Ident "=" Expr;
 coercions  Expr 7;
 separator  Expr ",";
 
-LTrue.  Bool ::= "true";
-LFalse. Bool ::= "false";
+LTrue.  LBool ::= "true";
+LFalse. LBool ::= "false";
 
 -- operators -----------------------------------------------
 
