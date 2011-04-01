@@ -2,7 +2,7 @@
 {-# LINE 3 "Lexjavalette.x" #-}
 
 {-# OPTIONS -fno-warn-incomplete-patterns #-}
-module Lexjavalette where
+module Lexer where
 
 
 

@@ -1,7 +1,7 @@
 module Main where
 
 import ErrM
-import Parjavalette
+import Parser
 
 import System.Environment (getArgs)
 import System.Exit (exitFailure)

@@ -1,8 +1,8 @@
 {-# OPTIONS_GHC -fno-warn-overlapping-patterns #-}
 {-# OPTIONS -fno-warn-incomplete-patterns -fno-warn-overlapping-patterns #-}
-module Parjavalette where
-import Absjavalette
-import Lexjavalette
+module Parser where
+import AST
+import Lexer
 import ErrM
 
 -- parser produced by Happy Version 1.18.5
