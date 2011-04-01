@@ -34,7 +34,7 @@ separator nonempty Declaration ",";
 -- Types ---------------------------------------------------
 
 TInt.          Type ::= "int";
-TDoub.         Type ::= "double";
+TDouble.       Type ::= "double";
 TBool.         Type ::= "boolean";
 TVoid.         Type ::= "void";
 internal TFun. Type ::= Type "(" [Type] ")";
