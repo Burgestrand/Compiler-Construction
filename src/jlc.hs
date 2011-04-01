@@ -21,6 +21,6 @@ main = do
     [file] -> do
       program <- parselex `fmap` readFile file
       case program of
-        Ok  x -> print x
+        Ok  x -> print $ (typecheck x)
         Bad s -> error s
     _      -> error "Usage: jlc path/to/javalette/source.jl"
