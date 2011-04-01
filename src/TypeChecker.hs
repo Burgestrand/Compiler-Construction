@@ -17,11 +17,17 @@ type Scope    = Map.Map Ident Type
 -- Typechecker
 --
 
-typecheck :: Program -> ()
-typecheck (Program defs) = undefined
+typecheck :: Program -> Env
+typecheck (Program defs) = flip execState emptyEnv $ do
+  collectDefs defs
 
-collectDefs :: State Env ()
-collectDefs = undefined
+-- | Iterate through all function definitions, modifying the environment
+collectDefs :: [Definition] -> State Env ()
+collectDefs defs = mapM_ finder defs
+  where
+    finder (Definition returns name args _) = do
+      let argx = TFun returns (map (\(Arg t _) -> t) args)
+      addVar name argx
 
 --
 -- Environment
