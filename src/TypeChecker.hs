@@ -3,34 +3,19 @@ module TypeChecker where
 import AST
 import Printer
 import ErrM
-import Env
+import qualified Env
 
-import Control.Monad
+import Control.Monad.State
 
+type TypeCheckM = State Env
 
+typecheck :: Program -> ()
+typecheck (Program defs) = undefined
 
-
-typecheck :: Program -> Err ()
-typecheck (Program defs) = do env <- collectDefs emptyEnv defs
-                              sequence_ $ map (checkDef env) defs
-
-
-collectDefs :: Env -> [Definition] -> Err Env
-collectDefs env []                           = return env
-collectDefs env ((FuncDef t id args _):defs) = 
-    do  env' <- addAny env id (Sign t args)
-        collectDefs env' defs
-
+collectDefs :: TypeCheckM ()
+collectDefs = undefined
 
 {-
-void :: Monad m => m a -> m ()
-void a = do _ <- a
-            return ()
-
-
-    
-
-
 checkDef :: Env -> Definition -> Err ()
 checkDef env (FuncDef t _ args stms) = do env' <- addArgs (addScope env) args
                                           void $ checkStms t env' stms
@@ -150,8 +135,5 @@ typeError e ts t' = fail (printTree e ++ " has type " ++ printTree t'
                           treeify [a]    = printTree a
                           treeify [a, b] = printTree a ++ " or " ++ printTree b
                           treeify (a:as) = printTree a ++ ", " ++ printTree as
-
--}
-
 
 -}
