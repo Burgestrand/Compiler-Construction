@@ -39,7 +39,7 @@ data Declaration =
 
 data Type =
    TInt
- | TDoub
+ | TDouble
  | TBool
  | TVoid
  | TFun Type [Type]

@@ -1261,7 +1261,7 @@ happyReduction_29 _
 happyReduce_30 = happySpecReduce_1  18 happyReduction_30
 happyReduction_30 _
 	 =  HappyAbsSyn18
-		 (TDoub
+		 (TDouble
 	)
 
 happyReduce_31 = happySpecReduce_1  18 happyReduction_31
