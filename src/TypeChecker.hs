@@ -1,4 +1,4 @@
-module TypeChecker where
+module TypeChecker (typecheck) where
 
 import AST
 import Printer
