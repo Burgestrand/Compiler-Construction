@@ -31,6 +31,144 @@ collectDefs defs = mapM_ finder defs
       let argx = TFun returns (map (\(Arg t _) -> t) args)
       addVar name argx
 
+
+
+
+checkDef :: Definition -> State Env ()
+checkDef (FuncDef t _ args (Block stms)) = do s <- get
+                                              addScope
+                                              addArgs args
+                                              checkStms t stms
+                                              put s
+    where addArgs []                = return ()
+          addArgs ((Arg t id):args) = do addVar id t
+                                         addArgs args
+
+
+checkStms :: Type -> [Statement] -> State Env ()
+checkStms _    []         = return ()
+checkStms rett (stm:stms) = do checkStm  rett stm
+                               checkStms rett stms
+
+
+checkStm :: Type -> Statement -> State Env ()
+checkStm rett stm = case stm of
+    (SEmpty)              -> return ()
+    (SBlock (Block stms)) -> checkStms rett stms
+    (SDeclaration t [ds]) -> mapM_ (varDecl t) ds
+    (SReturn e)           -> do t <- infer e
+                                if t /= rett 
+                                   then typeError stm [rett] t
+                                   else return ()
+    (SReturnV)            -> if TVoid /= rett 
+                                then typeError stm [rett] TVoid
+                                else return ()
+    (SIf e tstm)          -> do t <- infer e
+                                if t == TBool 
+                                    then do s <- get -- Remember me; I will return!
+                                            addScope
+                                            checkStm rett tstm
+                                            put s
+                                    else typeError e [TBool] t 
+    (SIfElse e tstm fstm) -> do t <- infer e
+                                if t == TBool 
+                                    then do s <- get -- Remember me; I will return!
+                                            addScope
+                                            checkStm rett tstm
+                                            put s
+                                            addScope
+                                            checkStm rett fstm
+                                            put s
+                                    else typeError e [TBool] t
+    (SWhile e stm)        -> do t <- infer e
+                                if t == TBool 
+                                    then do s <- get -- Remember me; I will return!
+                                            addScope
+                                            checkStm rett tstm
+                                            put s
+                                    else typeError e [TBool] t 
+    (SExpr e)             -> void $ infer e
+    
+
+varDecl :: Type -> Declaration -> State Env ()
+varDecl t decl = case decl of
+    (DNoInit id) -> addVar id t
+    (DInit id e) -> t' <- infer e
+                    if t' =/ t
+                        then typeError decl [t] t'
+                        else addVar id t
+
+                                    
+infer :: Expr -> State Env Type
+infer e = case e of  
+    (EInc id)          -> do t <- lookupVar id
+                             if t `elem` [TInt, TDouble] 
+                                then return t
+                                else typeError id [TInt, TDouble] t
+    (EDec id)          -> infer (EInc id)
+    (EVar id)          -> lookupVar id
+    (EInt _)           -> return TInt    
+    (EDouble _)        -> return TDouble 
+    (EBool _)          -> return TBool
+    (ECall id args)    -> do f' <- lookupVar id
+                             ts' <- mapM infer args
+                             case f' of
+                                TFun t ts | ts /= ts' -> typeError id [TFun t ts] (TFun t ts')
+                                          | otherwise -> return t
+                                _ -> fail $ (printTree id ) ++ " isn't a function"
+    (EString _)        -> return TString
+    (ENeg e)           -> do t <- infer e
+                             if t `elem` [TInt, TDouble] 
+                                then return t
+                                else typeError id [TInt, TDouble] t
+    (ENot e)           -> do t <- infer e
+                             if t `elem` [TBool] 
+                                then return t
+                                else typeError id [TBool] t
+    (EMul e1 op e2)    -> do t1 <- checkExpr e1
+                             t2 <- checkExpr e2
+                             if t1 `elem` [TInt, TDouble] 
+                                then if t2 == t1 
+                                     then return t1
+                                     else typeError e2 [t1] t2
+                                else typeError e1 [TInt, TDouble] t1
+    (EAdd e1 op e2)    -> infer (EMul e1 MulOp e2)
+    (EEqu e1 op e2)    -> do t1 <- infer e1
+                             t2 <- infer e2
+                             if t2 == t1 
+                                then return TBool
+                             else typeError e2 [t1] t2
+    (ERel e1 op e2)    -> do t1 <- checkExpr e1
+                             t2 <- checkExpr e2
+                             if t1 `elem` [TInt, TDouble] 
+                                then if t2 == t1 
+                                     then return TBool
+                                     else typeError e2 [t1] t2
+                                else typeError e1 [TInt, TDouble] t1
+    (EAnd e1 e2)       -> do t1 <- infer e1
+                             t2 <- infer e2
+                             if t1 == TBool 
+                                then if t2 == t1 
+                                     then return TBool
+                                     else typeError e2 [t1] t2
+                                else typeError e1 [TBool] t1
+    (EOr e1 e2)        -> infer (ELAnd e1 e2)
+    (EAss id e)        -> do vt <- lookupVar id
+                             et <- infer e
+                             if et == vt 
+                                then return et
+                                else typeError e [vt] et
+                            
+                            
+
+typeError e ts t' = fail (printTree e ++ " has type " ++ printTree t'
+                    ++ " expected " ++ treeify ts)
+                    where treeify []     = "a miracle" -- shouldn't happen
+                          treeify [a]    = printTree a
+                          treeify [a, b] = printTree a ++ " or " ++ printTree b
+                          treeify (a:as) = printTree a ++ ", " ++ printTree as
+
+
 --
 -- Environment
 --
@@ -58,126 +196,3 @@ lookupVar id = do
 -- | Add an empty scope layer atop the environment
 pushScope :: State Env ()
 pushScope = modify (emptyEnv ++)
-
-{-
-checkDef :: Env -> Definition -> Err ()
-checkDef env (FuncDef t _ args stms) = do env' <- addArgs (addScope env) args
-                                          void $ checkStms t env' stms
-    where addArgs env []                = return env
-          addArgs env ((Arg t id):args) = do env' <- addAny env id (TType t)
-                                             addArgs env' args
-
-
-checkStms :: Type -> Env -> [Statement] -> Err Env
-checkStms _    env []         = return env
-checkStms rett env (stm:stms) = do env' <- checkStm rett env stm
-                                   checkStms rett env' stms
-
-checkStm :: Type -> Env -> Statement -> Err Env
-checkStm rett env stm = case stm of
-    (SExpr e)             -> do _ <- checkExpr env e
-                                return env
-    (SVarDecl d)          -> checkVarDecl env d
-    (SBlock stms)         -> do _ <- checkStms rett (addScope env) stms
-                                return env
-    (SReturn e)           -> do t <- checkExpr env e
-                                if t == rett 
-                                    then return env
-                                    else typeError stm [rett] t
-    (SWhile e stm)        -> do t <- checkExpr env e
-                                if t == TBool 
-                                    then do _ <- checkStm rett (addScope env) stm
-                                            return env
-                                    else typeError e [TBool] t
-    (SIfElse e tstm fstm) -> do t <- checkExpr env e
-                                if t == TBool 
-                                    then do _ <- checkStm rett (addScope env) tstm
-                                            _ <- checkStm rett (addScope env) fstm
-                                            return env
-                                    else typeError e [TBool] t
-                                    
-checkExpr :: Env -> Expr -> Err Type
-checkExpr env e = case e of
-    (EInt _)           -> return TInt    
-    (EDouble _)        -> return TDouble 
-    (EBool _)          -> return TBool  
-    (EIdent id)        -> do t <- lookupVar env id
-                             return t
-    (EFuncApp id args) -> do (ft, ts) <- lookupSign env id
-                             es <- sequence $ [checkExpr env arg | arg <- args]
-                             if length ts /= length es || or [t /= e | (Arg t _, e) <- zip ts es] 
-                                then typeError id ts es
-                                else return ft
-
-    (EPostInc id)      -> do t <- lookupVar env id
-                             if t `elem` [TInt, TDouble] 
-                                then return t
-                                else typeError id [TInt, TDouble] t
-    (EPostDec id)      -> checkExpr env (EPostInc id)
-    (EPreInc id)       -> checkExpr env (EPostInc id)
-    (EPreDec id)       -> checkExpr env (EPostInc id)
-
-    (EMul e1 e2)       -> do t1 <- checkExpr env e1
-                             t2 <- checkExpr env e2
-                             if t1 `elem` [TInt, TDouble] 
-                                then if t2 == t1 
-                                     then return t1
-                                     else typeError e2 [t1] t2
-                                else typeError e1 [TInt, TDouble] t1
-    (EDiv e1 e2)       -> checkExpr env (EMul e1 e2)
-    (EAdd e1 e2)       -> checkExpr env (EMul e1 e2)
-    (ESub e1 e2)       -> checkExpr env (EMul e1 e2)
-    
-    (ECmpLT e1 e2)     -> do t1 <- checkExpr env e1
-                             t2 <- checkExpr env e2
-                             if t1 `elem` [TInt, TDouble] 
-                                then if t2 == t1 
-                                     then return TBool
-                                     else typeError e2 [t1] t2
-                                else typeError e1 [TInt, TDouble] t1
-    (ECmpGT e1 e2)     -> checkExpr env (ECmpLT e1 e2)
-    (ECmpLTE e1 e2)    -> checkExpr env (ECmpLT e1 e2)
-    (ECmpGTE e1 e2)    -> checkExpr env (ECmpLT e1 e2)
-
-    (ECmpEQ e1 e2)     -> do t1 <- checkExpr env e1
-                             t2 <- checkExpr env e2
-                             if t2 == t1 
-                                then return TBool
-                                else typeError e2 [t1] t2
-    (ECmpNEQ e1 e2)    -> checkExpr env (ECmpEQ e1 e2)
-
-    (ELAnd e1 e2)      -> do t1 <- checkExpr env e1
-                             t2 <- checkExpr env e2
-                             if t1 == TBool 
-                                then if t2 == t1 
-                                     then return TBool
-                                     else typeError e2 [t1] t2
-                                else typeError e1 [TBool] t1
-    (ELOr e1 e2)       -> checkExpr env (ELAnd e1 e2)
-
-    (EAssign id e)     -> do vt <- lookupVar env id
-                             et <- checkExpr env e
-                             if et == vt 
-                                then return et
-                                else typeError e [vt] et
-
-checkVarDecl :: Env -> VarDecl -> Err Env
-
-checkVarDecl env vdecl = case vdecl of
-    (MultiDecl t ids)  -> foldM (\env' id -> addAny env' id (TType t)) env ids
-    
-    (AssDecl   t id e) -> do et <- checkExpr env e
-                             if t == et
-                               then addAny env id (TType t)
-                               else typeError e [t] et
-                            
-                            
-
-typeError e ts t' = fail (printTree e ++ " has type " ++ printTree t'
-                    ++ " expected " ++ treeify ts)
-                    where treeify []     = "a miracle" -- shouldn't happen
-                          treeify [a]    = printTree a
-                          treeify [a, b] = printTree a ++ " or " ++ printTree b
-                          treeify (a:as) = printTree a ++ ", " ++ printTree as
-
--}
