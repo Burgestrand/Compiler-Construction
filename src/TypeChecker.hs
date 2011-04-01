@@ -3,17 +3,53 @@ module TypeChecker (typecheck) where
 import AST
 import Printer
 import ErrM
-import qualified Env
 
 import Control.Monad.State
+import Data.List
+import qualified Data.Map as Map
 
-type TypeCheckM = State Env
+--
+
+type Env      = [Scope]
+type Scope    = Map.Map Ident Type
+
+--
+-- Typechecker
+--
 
 typecheck :: Program -> ()
 typecheck (Program defs) = undefined
 
-collectDefs :: TypeCheckM ()
+collectDefs :: State Env ()
 collectDefs = undefined
+
+--
+-- Environment
+--
+
+-- | Empty environment
+emptyEnv :: Env
+emptyEnv = [Map.empty]
+
+-- | Add an identifier to the current scope
+addVar :: Ident -> Type -> State Env ()
+addVar id t = do
+  (scope:scopes) <- get
+  if Map.member id scope
+    then fail $ "Identifier " ++ printTree id ++ " already declared."
+    else put $ (Map.insert id t scope):scopes
+
+-- | Find an identifier in the environment
+lookupVar :: Ident -> State Env Type
+lookupVar id = do
+  env <- get
+  case find (Map.member id) env of
+    Just scope -> return $ (Map.!) scope id
+    Nothing    -> fail   $ "Unknown identifier " ++ printTree id
+
+-- | Add an empty scope layer atop the environment
+pushScope :: State Env ()
+pushScope = modify (emptyEnv ++)
 
 {-
 checkDef :: Env -> Definition -> Err ()
