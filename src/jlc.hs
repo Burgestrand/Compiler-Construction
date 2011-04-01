@@ -2,6 +2,7 @@ module Main where
 
 import ErrM
 import Parser
+import TypeChecker
 
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
