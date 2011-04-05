@@ -76,16 +76,15 @@ checkReturn (Definition _ _ _ (Block stms)) = checkReturnStms stms
         _                     -> checkReturnStms stms
 
 
+-- 
 checkBlock :: Type -> Block -> State Env ()
-checkBlock returns (Block body) = withNewScope $ checkStms returns body
+checkBlock returns (Block body) = withNewScope $ checkStatements returns body
 
-checkStms :: Type -> [Statement] -> State Env ()
-checkStms _    []         = return ()
-checkStms rett (stm:stms) = do checkStm  rett stm
-                               checkStms rett stms
+checkStatements :: Type -> [Statement] -> State Env ()
+checkStatements returns ss = mapM_ (checkStatement returns) ss
 
-checkStm :: Type -> Statement -> State Env ()
-checkStm rett stm = case stm of
+checkStatement :: Type -> Statement -> State Env ()
+checkStatement rett stm = case stm of
     (SEmpty)              -> return ()
     (SBlock b)            -> checkBlock rett b
     (SDeclaration t ds) -> mapM_ (varDecl t) ds
@@ -98,16 +97,16 @@ checkStm rett stm = case stm of
                                 else return ()
     (SIf e tstm)          -> do t <- infer e
                                 if t == TBool 
-                                   then checkStm rett tstm
+                                   then checkStatement rett tstm
                                    else typeError e [TBool] t 
     (SIfElse e tstm fstm) -> do t <- infer e
                                 if t == TBool 
-                                   then do checkStm rett tstm
-                                           checkStm rett fstm
+                                   then do checkStatement rett tstm
+                                           checkStatement rett fstm
                                    else typeError e [TBool] t
     (SWhile e stm)        -> do t <- infer e
                                 if t == TBool 
-                                   then do checkStm rett stm
+                                   then do checkStatement rett stm
                                    else typeError e [TBool] t 
     (SExpr e)             -> infer e >> return ()
     
