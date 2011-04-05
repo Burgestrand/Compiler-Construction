@@ -31,6 +31,16 @@ collectDefinitions defs = mapM_ finder defs
     finder (Definition returns name args _) = 
       addVar name (TFun returns (map (\(Arg typ _) -> typ) args))
 
+
+---
+
+-- | Typecheck an entire function definition (including its’ body)
+checkDefinition :: Definition -> State Env ()
+checkDefinition (Definition typ _ args (Block body)) = withNewScope $ do
+  mapM_ (\(Arg typ id) -> addVar id typ) args
+  checkStatements typ body
+
+-- | Make sure a function always returns
 checkReturn :: Definition -> State Env Bool
 checkReturn (Definition TVoid _ _ _) = return True
 checkReturn (Definition _ _ _ (Block stms)) = checkReturnStms stms
@@ -65,13 +75,6 @@ checkReturn (Definition _ _ _ (Block stms)) = checkReturnStms stms
                                                              else checkReturnStms stms
         _                     -> checkReturnStms stms
 
----
-
--- | Typecheck an entire function definition (including its’ body)
-checkDefinition :: Definition -> State Env ()
-checkDefinition (Definition typ _ args (Block body)) = withNewScope $ do
-  mapM_ (\(Arg typ id) -> addVar id typ) args
-  checkStms typ body
 
 checkBlock :: Type -> Block -> State Env ()
 checkBlock returns (Block body) = withNewScope $ checkStms returns body
