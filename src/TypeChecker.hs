@@ -20,6 +20,7 @@ type Scope    = Map.Map Ident Type
 typecheck :: Program -> Env
 typecheck (Program defs) = flip execState emptyEnv $ do
   collectDefs defs
+  
   -- checkReturns defs
   
 
@@ -32,18 +33,22 @@ collectDefs defs = mapM_ finder defs
       addVar name argx
 
 
-
-
 checkDef :: Definition -> State Env ()
-checkDef (FuncDef t _ args (Block stms)) = do s <- get
-                                              addScope
-                                              addArgs args
-                                              checkStms t stms
-                                              put s
+checkDef (FuncDef t _ args b) = do s <- get
+                                   addScope
+                                   addArgs args
+                                   checkStms t b
+                                   put s
     where addArgs []                = return ()
           addArgs ((Arg t id):args) = do addVar id t
                                          addArgs args
 
+
+checkBlock :: Type -> Block -> State Env ()
+checkBlock rett (Block stms) = do s <- get
+                                  pushScope
+                                  checkStms rett stms
+                                  put s
 
 checkStms :: Type -> [Statement] -> State Env ()
 checkStms _    []         = return ()
@@ -54,7 +59,7 @@ checkStms rett (stm:stms) = do checkStm  rett stm
 checkStm :: Type -> Statement -> State Env ()
 checkStm rett stm = case stm of
     (SEmpty)              -> return ()
-    (SBlock (Block stms)) -> checkStms rett stms
+    (SBlock b)            -> checkBlock rett b
     (SDeclaration t [ds]) -> mapM_ (varDecl t) ds
     (SReturn e)           -> do t <- infer e
                                 if t /= rett 
@@ -65,27 +70,16 @@ checkStm rett stm = case stm of
                                 else return ()
     (SIf e tstm)          -> do t <- infer e
                                 if t == TBool 
-                                    then do s <- get -- Remember me; I will return!
-                                            addScope
-                                            checkStm rett tstm
-                                            put s
+                                    then checkStm rett tstm
                                     else typeError e [TBool] t 
     (SIfElse e tstm fstm) -> do t <- infer e
                                 if t == TBool 
-                                    then do s <- get -- Remember me; I will return!
-                                            addScope
-                                            checkStm rett tstm
-                                            put s
-                                            addScope
+                                    then do checkStm rett tstm
                                             checkStm rett fstm
-                                            put s
                                     else typeError e [TBool] t
     (SWhile e stm)        -> do t <- infer e
                                 if t == TBool 
-                                    then do s <- get -- Remember me; I will return!
-                                            addScope
-                                            checkStm rett tstm
-                                            put s
+                                    then do checkStm rett tstm
                                     else typeError e [TBool] t 
     (SExpr e)             -> void $ infer e
     
@@ -125,8 +119,8 @@ infer e = case e of
                              if t `elem` [TBool] 
                                 then return t
                                 else typeError id [TBool] t
-    (EMul e1 op e2)    -> do t1 <- checkExpr e1
-                             t2 <- checkExpr e2
+    (EMul e1 op e2)    -> do t1 <- infer e1
+                             t2 <- infer e2
                              if t1 `elem` [TInt, TDouble] 
                                 then if t2 == t1 
                                      then return t1
@@ -138,8 +132,8 @@ infer e = case e of
                              if t2 == t1 
                                 then return TBool
                              else typeError e2 [t1] t2
-    (ERel e1 op e2)    -> do t1 <- checkExpr e1
-                             t2 <- checkExpr e2
+    (ERel e1 op e2)    -> do t1 <- infer e1
+                             t2 <- infer e2
                              if t1 `elem` [TInt, TDouble] 
                                 then if t2 == t1 
                                      then return TBool
