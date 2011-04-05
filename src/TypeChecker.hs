@@ -12,36 +12,36 @@ import qualified Data.Map as Map
 
 type Env      = [Scope]
 type Scope    = Map.Map Ident Type
+type FailStateM = StateT Env Err
 
 --
 -- Typechecker
 --
 
-typecheck :: Program -> Env
-typecheck (Program defs) = flip execState emptyEnv $ do
+typecheck :: Program -> Err ()
+typecheck (Program defs) = flip evalStateT emptyEnv $ do
   collectDefinitions defs       -- Fills enviroment with function signatures
   mapM_ checkDefinition defs    -- Typechecks all functions
   mapM_ checkReturn defs        -- Check that all functions return
 
 -- | Iterate through all function definitions, modifying the environment
 --   by adding them and their types to it.
-collectDefinitions :: [Definition] -> State Env ()
+collectDefinitions :: [Definition] -> FailStateM ()
 collectDefinitions defs = mapM_ finder defs
   where
     finder (Definition returns name args _) = 
       addVar name (TFun returns (map (\(Arg typ _) -> typ) args))
 
-
 ---
 
 -- | Typecheck an entire function definition (including its’ body)
-checkDefinition :: Definition -> State Env ()
+checkDefinition :: Definition -> FailStateM ()
 checkDefinition (Definition typ _ args (Block body)) = withNewScope $ do
   mapM_ (\(Arg typ id) -> addVar id typ) args
   checkStatements typ body
 
 -- | Make sure a function always returns
-checkReturn :: Definition -> State Env ()
+checkReturn :: Definition -> FailStateM ()
 checkReturn (Definition TVoid _ _ _)            = return ()
 checkReturn (Definition _ name  _ (Block stms)) = do
   returning <- checkReturnStms stms
@@ -80,13 +80,13 @@ checkReturn (Definition _ name  _ (Block stms)) = do
 
 
 -- 
-checkBlock :: Type -> Block -> State Env ()
-checkBlock returns (Block body) = withNewScope $ checkStatements returns body
+checkBlock :: Type -> Block -> FailStateM ()
+checkBlock returns (Block body) = withNewScope (checkStatements returns body)
 
-checkStatements :: Type -> [Statement] -> State Env ()
+checkStatements :: Type -> [Statement] -> FailStateM ()
 checkStatements returns ss = mapM_ (checkStatement returns) ss
 
-checkStatement :: Type -> Statement -> State Env ()
+checkStatement :: Type -> Statement -> FailStateM ()
 checkStatement rett stm = case stm of
     (SEmpty)              -> return ()
     (SBlock b)            -> checkBlock rett b
@@ -114,7 +114,7 @@ checkStatement rett stm = case stm of
     (SExpr e)             -> infer e >> return ()
     
 
-varDecl :: Type -> Declaration -> State Env ()
+varDecl :: Type -> Declaration -> FailStateM ()
 varDecl t decl = case decl of
     (DNoInit id) -> addVar id t
     (DInit id e) -> do t' <- infer e
@@ -123,7 +123,7 @@ varDecl t decl = case decl of
                           else addVar id t
 
                                     
-infer :: Expr -> State Env Type
+infer :: Expr -> FailStateM Type
 infer e = case e of  
     (EInc id)          -> do t <- lookupVar id
                              if t `elem` [TInt, TDouble] 
@@ -201,7 +201,7 @@ emptyEnv :: Env
 emptyEnv = [Map.empty]
 
 -- | Add an identifier to the current scope
-addVar :: Ident -> Type -> State Env ()
+addVar :: Ident -> Type -> FailStateM ()
 addVar id t = do
   (scope:scopes) <- get
   if Map.member id scope
@@ -209,7 +209,7 @@ addVar id t = do
     else put $ (Map.insert id t scope):scopes
 
 -- | Find an identifier in the environment
-lookupVar :: Ident -> State Env Type
+lookupVar :: Ident -> FailStateM Type
 lookupVar id = do
   env <- get
   case find (Map.member id) env of
@@ -217,12 +217,12 @@ lookupVar id = do
     Nothing    -> fail   $ "Unknown identifier " ++ printTree id
 
 -- | Add an empty scope layer atop the environment
-pushScope :: State Env ()
+pushScope :: FailStateM ()
 pushScope = modify (emptyEnv ++)
 
 -- | Push an empty scope atop the environment temporarily, restoring the
 --   old environment upon completion.
-withNewScope :: State Env x -> State Env x
+withNewScope :: FailStateM x -> FailStateM x
 withNewScope code = do
   scopes <- get
   pushScope
