@@ -106,7 +106,7 @@ checkStm rett stm = case stm of
                                 if t == TBool 
                                    then do checkStm rett stm
                                    else typeError e [TBool] t 
-    (SExpr e)             -> void (infer e)
+    (SExpr e)             -> infer e >> return ()
     
 
 varDecl :: Type -> Declaration -> State Env ()
@@ -186,13 +186,6 @@ typeError e ts t' = fail (printTree e ++ " has type " ++ printTree t'
                           treeify [a]    = printTree a
                           treeify [a, b] = printTree a ++ " or " ++ printTree b
                           treeify (a:as) = printTree a ++ ", " ++ printTree as
-
---
--- Utility
---
-
-void :: (Monad m) => m a -> m ()
-void = (>> return ())
 
 --
 -- Environment
