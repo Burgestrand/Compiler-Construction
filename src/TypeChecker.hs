@@ -34,18 +34,12 @@ collectDefinitions defs = mapM_ finder defs
 
 -- 
 checkDef :: Definition -> State Env ()
-checkDef (FuncDef t _ args (Block stms)) = do
-  scopes <- get
-  pushScope
-  mapM_ (\(Arg t id) -> addVar id t)
+checkDef (Definition t _ args (Block stms)) = withNewScope $ do
+  mapM_ (\(Arg t id) -> addVar id t) args
   checkStms t stms
-  put scopes
 
 checkBlock :: Type -> Block -> State Env ()
-checkBlock rett (Block stms) = do s <- get
-                                  pushScope
-                                  checkStms rett stms
-                                  put s
+checkBlock rett (Block stms) = withNewScope $ checkStms rett stms
 
 checkStms :: Type -> [Statement] -> State Env ()
 checkStms _    []         = return ()
@@ -187,3 +181,13 @@ lookupVar id = do
 -- | Add an empty scope layer atop the environment
 pushScope :: State Env ()
 pushScope = modify (emptyEnv ++)
+
+-- | Push an empty scope atop the environment temporarily, restoring the
+--   old environment upon completion.
+withNewScope :: State Env x -> State Env x
+withNewScope code = do
+  scopes <- get
+  pushScope
+  returns <- code
+  put scopes
+  return returns
