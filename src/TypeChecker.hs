@@ -31,6 +31,42 @@ collectDefinitions defs = mapM_ finder defs
     finder (Definition returns name args _) = 
       addVar name (TFun returns (map (\(Arg typ _) -> typ) args))
 
+checkReturn :: Definition -> State Env Bool
+checkReturn (Definition TVoid _ _ _) = return True
+checkReturn (Definition _ _ _ (Block stms)) = checkReturnStms stms
+  where
+    checkReturnStms []         = return False
+    checkReturnStms (stm:stms) = case stm of
+        (SBlock (Block stms2))-> r1 <- checkReturnStms stms2 
+                                 if r1 
+                                    then return True
+                                    else checkReturnStms stms
+        (SReturn e)           -> return True
+        (SReturnV)            -> return True
+        (SIf e tstm)          -> case e of
+                                     (EBool LTrue) -> do r1 <- checkReturnStms [tstm]
+                                                         if r1
+                                                            then return True
+                                                            else checkReturnStms stms
+                                     _             -> checkReturnStms stms                     
+        (SIfElse e tstm fstm) -> case e of
+                                     (EBool LTrue) -> do r1 <- checkReturnStms [tstm]
+                                                         if r1
+                                                            then return True
+                                                            else checkReturnStms stms
+                                     (EBool LFalse) -> do r1 <- checkReturnStms [fstm]
+                                                         if r1
+                                                            then return True
+                                                            else checkReturnStms stms
+                                     _              -> do r1 <- checkReturnStms [tstm]
+                                                          r2 <- checkReturnStms [fstm]
+                                                          if r1 && r2
+                                                             then return True
+                                                             else checkReturnStms stms
+        _                     -> checkReturnStms stms
+
+---
+
 -- | Typecheck an entire function definition (including its’ body)
 checkDefinition :: Definition -> State Env ()
 checkDefinition (Definition typ _ args (Block body)) = withNewScope $ do
@@ -44,41 +80,6 @@ checkStms :: Type -> [Statement] -> State Env ()
 checkStms _    []         = return ()
 checkStms rett (stm:stms) = do checkStm  rett stm
                                checkStms rett stms
-
----
-
-checkReturn :: Definition -> State Env Bool
-checkReturn (Definition _ _ _ (Block stms)) = checkReturnStms stms
- where
-   checkReturnStms []         = return False
-   checkReturnStms (stm:stms) = case stm of
-       (SBlock (Block stms2))-> r1 <- checkReturnStms stms2 
-                                if r1 
-                                   then return True
-                                   else checkReturnStms stms
-       (SReturn e)           -> return True
-       (SReturnV)            -> return True
-       (SIf e tstm)          -> case e of
-                                    (EBool LTrue) -> do r1 <- checkReturnStms [tstm]
-                                                        if r1
-                                                           then return True
-                                                           else checkReturnStms stms
-                                    _             -> checkReturnStms stms                     
-       (SIfElse e tstm fstm) -> case e of
-                                    (EBool LTrue) -> do r1 <- checkReturnStms [tstm]
-                                                        if r1
-                                                           then return True
-                                                           else checkReturnStms stms
-                                    (EBool LFalse) -> do r1 <- checkReturnStms [fstm]
-                                                        if r1
-                                                           then return True
-                                                           else checkReturnStms stms
-                                    _              -> do r1 <- checkReturnStms [tstm]
-                                                         r2 <- checkReturnStms [fstm]
-                                                         if r1 && r2
-                                                            then return True
-                                                            else checkReturnStms stms
-       _                     -> checkReturnStms stms
 
 checkStm :: Type -> Statement -> State Env ()
 checkStm rett stm = case stm of
