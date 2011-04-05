@@ -30,16 +30,16 @@ collectDefinitions :: [Definition] -> State Env ()
 collectDefinitions defs = mapM_ finder defs
   where
     finder (Definition returns name args _) = 
-      addVar name (TFun returns (map (\(Arg t _) -> t) args))
+      addVar name (TFun returns (map (\(Arg typ _) -> typ) args))
 
 -- | Typecheck an entire function definition (including its’ body)
 checkDefinition :: Definition -> State Env ()
-checkDefinition (Definition t _ args (Block stms)) = withNewScope $ do
-  mapM_ (\(Arg t id) -> addVar id t) args
-  checkStms t stms
+checkDefinition (Definition typ _ args (Block body)) = withNewScope $ do
+  mapM_ (\(Arg typ id) -> addVar id typ) args
+  checkStms typ body
 
 checkBlock :: Type -> Block -> State Env ()
-checkBlock rett (Block stms) = withNewScope $ checkStms rett stms
+checkBlock returns (Block body) = withNewScope $ checkStms returns body
 
 checkStms :: Type -> [Statement] -> State Env ()
 checkStms _    []         = return ()
