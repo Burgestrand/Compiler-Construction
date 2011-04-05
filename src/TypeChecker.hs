@@ -19,9 +19,9 @@ type Scope    = Map.Map Ident Type
 
 typecheck :: Program -> Env
 typecheck (Program defs) = flip execState emptyEnv $ do
-  collectDefinitions defs
-  mapM_ checkDefinition defs
-  unless (and $ mapM checkReturn defs) fail $ "Missing return"  
+  collectDefinitions defs       -- Fills enviroment with function signatures
+  mapM_ checkDefinition defs    -- Typechecks all functions
+  mapM_ checkReturn defs        -- Check that all functions return
 
 -- | Iterate through all function definitions, modifying the environment
 --   by adding them and their types to it.
@@ -42,8 +42,11 @@ checkDefinition (Definition typ _ args (Block body)) = withNewScope $ do
 
 -- | Make sure a function always returns
 checkReturn :: Definition -> State Env Bool
-checkReturn (Definition TVoid _ _ _)        = return True
-checkReturn (Definition _ _ _ (Block stms)) = checkReturnStms stms
+checkReturn (Definition TVoid _ _ _)            = return ()
+checkReturn (Definition _ name  _ (Block stms)) = 
+  if checkReturnStms stms
+    then return ()
+    else fail $ "Function " ++ show name ++ " cannot safely be assumed to return"
   where
     checkReturnStms []         = return False
     checkReturnStms (stm:stms) = case stm of
