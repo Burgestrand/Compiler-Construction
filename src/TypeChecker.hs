@@ -34,7 +34,7 @@ collectDefinitions defs = mapM_ finder defs
       addVar name (TFun returns (map (\(Arg t _) -> t) args))
 
 checkReturn :: Definition -> State Env Bool
-checkReturn (Definition TVoid _ _ _) = return True
+checkReturn (Definition TVoid _ _ _)        = return True
 checkReturn (Definition _ _ _ (Block stms)) = checkReturnStms stms
   where
     checkReturnStms []         = return False
