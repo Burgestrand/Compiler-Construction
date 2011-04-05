@@ -21,8 +21,7 @@ typecheck :: Program -> Env
 typecheck (Program defs) = flip execState emptyEnv $ do
   collectDefinitions defs
   mapM_ checkDefinition defs
-  -- checkReturns defs
-  
+  unless (and $ mapM checkReturn defs) fail $ "Missing return"  
 
 -- | Iterate through all function definitions, modifying the environment
 --   by adding them and their types to it.
@@ -46,6 +45,40 @@ checkStms _    []         = return ()
 checkStms rett (stm:stms) = do checkStm  rett stm
                                checkStms rett stms
 
+---
+
+checkReturn :: Definition -> State Env Bool
+checkReturn (Definition _ _ _ (Block stms)) = checkReturnStms stms
+ where
+   checkReturnStms []         = return False
+   checkReturnStms (stm:stms) = case stm of
+       (SBlock (Block stms2))-> r1 <- checkReturnStms stms2 
+                                if r1 
+                                   then return True
+                                   else checkReturnStms stms
+       (SReturn e)           -> return True
+       (SReturnV)            -> return True
+       (SIf e tstm)          -> case e of
+                                    (EBool LTrue) -> do r1 <- checkReturnStms [tstm]
+                                                        if r1
+                                                           then return True
+                                                           else checkReturnStms stms
+                                    _             -> checkReturnStms stms                     
+       (SIfElse e tstm fstm) -> case e of
+                                    (EBool LTrue) -> do r1 <- checkReturnStms [tstm]
+                                                        if r1
+                                                           then return True
+                                                           else checkReturnStms stms
+                                    (EBool LFalse) -> do r1 <- checkReturnStms [fstm]
+                                                        if r1
+                                                           then return True
+                                                           else checkReturnStms stms
+                                    _              -> do r1 <- checkReturnStms [tstm]
+                                                         r2 <- checkReturnStms [fstm]
+                                                         if r1 && r2
+                                                            then return True
+                                                            else checkReturnStms stms
+       _                     -> checkReturnStms stms
 
 checkStm :: Type -> Statement -> State Env ()
 checkStm rett stm = case stm of
@@ -97,6 +130,7 @@ infer e = case e of
     (EBool _)          -> return TBool
     (ECall id args)    -> do f' <- lookupVar id
                              ts' <- mapM infer args
+                             -- TODO Hantera strängar!!
                              case f' of
                                 TFun t ts | ts /= ts' -> typeError id [TFun t ts] (TFun t ts')
                                           | otherwise -> return t
