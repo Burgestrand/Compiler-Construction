@@ -27,9 +27,8 @@ typecheck (Program defs) = flip execState emptyEnv $ do
 collectDefs :: [Definition] -> State Env ()
 collectDefs defs = mapM_ finder defs
   where
-    finder (Definition returns name args _) = do
-      let argx = TFun returns (map (\(Arg t _) -> t) args)
-      addVar name argx
+    finder (Definition returns name args _) = 
+      addVar name (TFun returns (map (\(Arg t _) -> t) args))
 
 --
 -- Environment
