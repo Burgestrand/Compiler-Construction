@@ -19,19 +19,20 @@ type Scope    = Map.Map Ident Type
 
 typecheck :: Program -> Env
 typecheck (Program defs) = flip execState emptyEnv $ do
-  collectDefs defs
+  collectDefinitions defs
   sequence_ $ map checkDef defs
   -- checkReturns defs
   
 
 -- | Iterate through all function definitions, modifying the environment
-collectDefs :: [Definition] -> State Env ()
-collectDefs defs = mapM_ finder defs
+--   by adding them and their types to it.
+collectDefinitions :: [Definition] -> State Env ()
+collectDefinitions defs = mapM_ finder defs
   where
     finder (Definition returns name args _) = 
       addVar name (TFun returns (map (\(Arg t _) -> t) args))
 
-
+-- 
 checkDef :: Definition -> State Env ()
 checkDef (FuncDef t _ args (Block stms)) = do
   scope <- get
