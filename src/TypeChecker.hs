@@ -34,11 +34,11 @@ collectDefinitions defs = mapM_ finder defs
 -- 
 checkDef :: Definition -> State Env ()
 checkDef (FuncDef t _ args (Block stms)) = do
-  scope <- get
-  addScope
+  scopes <- get
+  pushScope
   mapM_ (\(Arg t id) -> addVar id t)
   checkStms t stms
-  put scope
+  put scopes
 
 checkBlock :: Type -> Block -> State Env ()
 checkBlock rett (Block stms) = do s <- get
