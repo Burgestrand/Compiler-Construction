@@ -41,12 +41,12 @@ checkDefinition (Definition typ _ args (Block body)) = withNewScope $ do
   checkStatements typ body
 
 -- | Make sure a function always returns
-checkReturn :: Definition -> State Env Bool
+checkReturn :: Definition -> State Env ()
 checkReturn (Definition TVoid _ _ _)            = return ()
-checkReturn (Definition _ name  _ (Block stms)) = 
-  if checkReturnStms stms
-    then return ()
-    else fail $ "Function " ++ show name ++ " cannot safely be assumed to return"
+checkReturn (Definition _ name  _ (Block stms)) = do
+  returning <- checkReturnStms stms
+  unless returning $ 
+    fail $ "Function " ++ show name ++ " cannot safely be assumed to return"
   where
     checkReturnStms []         = return False
     checkReturnStms (stm:stms) = case stm of
