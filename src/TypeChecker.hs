@@ -33,15 +33,12 @@ collectDefs defs = mapM_ finder defs
 
 
 checkDef :: Definition -> State Env ()
-checkDef (FuncDef t _ args b) = do s <- get
-                                   addScope
-                                   addArgs args
-                                   checkStms t b
-                                   put s
-    where addArgs []                = return ()
-          addArgs ((Arg t id):args) = do addVar id t
-                                         addArgs args
-
+checkDef (FuncDef t _ args (Block stms)) = do
+  scope <- get
+  addScope
+  mapM_ (\(Arg t id) -> addVar id t)
+  checkStms t stms
+  put scope
 
 checkBlock :: Type -> Block -> State Env ()
 checkBlock rett (Block stms) = do s <- get
