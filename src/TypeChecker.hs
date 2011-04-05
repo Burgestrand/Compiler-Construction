@@ -33,8 +33,8 @@ collectDefinitions defs = mapM_ finder defs
       addVar name (TFun returns (map (\(Arg t _) -> t) args))
 
 -- 
-checkDef :: Definition -> State Env ()
-checkDef (Definition t _ args (Block stms)) = withNewScope $ do
+checkDefinition :: Definition -> State Env ()
+checkDefinition (Definition t _ args (Block stms)) = withNewScope $ do
   mapM_ (\(Arg t id) -> addVar id t) args
   checkStms t stms
 
