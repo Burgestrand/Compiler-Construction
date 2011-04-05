@@ -47,10 +47,10 @@ checkReturn (Definition _ _ _ (Block stms)) = checkReturnStms stms
   where
     checkReturnStms []         = return False
     checkReturnStms (stm:stms) = case stm of
-        (SBlock (Block stms2))-> r1 <- checkReturnStms stms2 
-                                 if r1 
-                                    then return True
-                                    else checkReturnStms stms
+        (SBlock (Block stms2))-> do r1 <- checkReturnStms stms2 
+                                    if r1 
+                                       then return True
+                                       else checkReturnStms stms
         (SReturn e)           -> return True
         (SReturnV)            -> return True
         (SIf e tstm)          -> case e of
@@ -65,9 +65,9 @@ checkReturn (Definition _ _ _ (Block stms)) = checkReturnStms stms
                                                             then return True
                                                             else checkReturnStms stms
                                      (EBool LFalse) -> do r1 <- checkReturnStms [fstm]
-                                                         if r1
-                                                            then return True
-                                                            else checkReturnStms stms
+                                                          if r1
+                                                             then return True
+                                                             else checkReturnStms stms
                                      _              -> do r1 <- checkReturnStms [tstm]
                                                           r2 <- checkReturnStms [fstm]
                                                           if r1 && r2
