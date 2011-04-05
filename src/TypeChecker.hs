@@ -51,7 +51,7 @@ checkStm :: Type -> Statement -> State Env ()
 checkStm rett stm = case stm of
     (SEmpty)              -> return ()
     (SBlock b)            -> checkBlock rett b
-    (SDeclaration t [ds]) -> mapM_ (varDecl t) ds
+    (SDeclaration t ds) -> mapM_ (varDecl t) ds
     (SReturn e)           -> do t <- infer e
                                 if t /= rett 
                                    then typeError stm [rett] t
@@ -61,27 +61,27 @@ checkStm rett stm = case stm of
                                 else return ()
     (SIf e tstm)          -> do t <- infer e
                                 if t == TBool 
-                                    then checkStm rett tstm
-                                    else typeError e [TBool] t 
+                                   then checkStm rett tstm
+                                   else typeError e [TBool] t 
     (SIfElse e tstm fstm) -> do t <- infer e
                                 if t == TBool 
-                                    then do checkStm rett tstm
-                                            checkStm rett fstm
-                                    else typeError e [TBool] t
+                                   then do checkStm rett tstm
+                                           checkStm rett fstm
+                                   else typeError e [TBool] t
     (SWhile e stm)        -> do t <- infer e
                                 if t == TBool 
-                                    then do checkStm rett tstm
-                                    else typeError e [TBool] t 
-    (SExpr e)             -> void $ infer e
+                                   then do checkStm rett stm
+                                   else typeError e [TBool] t 
+    (SExpr e)             -> void (infer e)
     
 
 varDecl :: Type -> Declaration -> State Env ()
 varDecl t decl = case decl of
     (DNoInit id) -> addVar id t
-    (DInit id e) -> t' <- infer e
-                    if t' =/ t
-                        then typeError decl [t] t'
-                        else addVar id t
+    (DInit id e) -> do t' <- infer e
+                       if t' /= t
+                          then typeError decl [t] t'
+                          else addVar id t
 
                                     
 infer :: Expr -> State Env Type
@@ -101,15 +101,14 @@ infer e = case e of
                                 TFun t ts | ts /= ts' -> typeError id [TFun t ts] (TFun t ts')
                                           | otherwise -> return t
                                 _ -> fail $ (printTree id ) ++ " isn't a function"
-    (EString _)        -> return TString
     (ENeg e)           -> do t <- infer e
                              if t `elem` [TInt, TDouble] 
                                 then return t
-                                else typeError id [TInt, TDouble] t
+                                else typeError e [TInt, TDouble] t
     (ENot e)           -> do t <- infer e
                              if t `elem` [TBool] 
                                 then return t
-                                else typeError id [TBool] t
+                                else typeError e [TBool] t
     (EMul e1 op e2)    -> do t1 <- infer e1
                              t2 <- infer e2
                              if t1 `elem` [TInt, TDouble] 
@@ -117,12 +116,12 @@ infer e = case e of
                                      then return t1
                                      else typeError e2 [t1] t2
                                 else typeError e1 [TInt, TDouble] t1
-    (EAdd e1 op e2)    -> infer (EMul e1 MulOp e2)
+    (EAdd e1 op e2)    -> infer (EMul e1 Times e2)
     (EEqu e1 op e2)    -> do t1 <- infer e1
                              t2 <- infer e2
                              if t2 == t1 
-                                then return TBool
-                             else typeError e2 [t1] t2
+                               then return TBool
+                               else typeError e2 [t1] t2
     (ERel e1 op e2)    -> do t1 <- infer e1
                              t2 <- infer e2
                              if t1 `elem` [TInt, TDouble] 
@@ -137,7 +136,7 @@ infer e = case e of
                                      then return TBool
                                      else typeError e2 [t1] t2
                                 else typeError e1 [TBool] t1
-    (EOr e1 e2)        -> infer (ELAnd e1 e2)
+    (EOr e1 e2)        -> infer (EAnd e1 e2)
     (EAss id e)        -> do vt <- lookupVar id
                              et <- infer e
                              if et == vt 
@@ -145,7 +144,7 @@ infer e = case e of
                                 else typeError e [vt] et
                             
                             
-
+typeError :: (Monad m, Print a) => a -> [Type] -> Type -> m x
 typeError e ts t' = fail (printTree e ++ " has type " ++ printTree t'
                     ++ " expected " ++ treeify ts)
                     where treeify []     = "a miracle" -- shouldn't happen
