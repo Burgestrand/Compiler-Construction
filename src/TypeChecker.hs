@@ -20,10 +20,8 @@ type Scope    = Map.Map Ident Type
 typecheck :: Program -> Env
 typecheck (Program defs) = flip execState emptyEnv $ do
   collectDefinitions defs
-  mapM_ checkDef defs
-  unless (and $ mapM checkReturn defs) fail $ "Missing return"
-
-  
+  mapM_ checkDefinition defs
+  unless (and $ mapM checkReturn defs) fail $ "Missing return"  
 
 -- | Iterate through all function definitions, modifying the environment
 --   by adding them and their types to it.
@@ -31,8 +29,18 @@ collectDefinitions :: [Definition] -> State Env ()
 collectDefinitions defs = mapM_ finder defs
   where
     finder (Definition returns name args _) = 
-      addVar name (TFun returns (map (\(Arg t _) -> t) args))
+      addVar name (TFun returns (map (\(Arg typ _) -> typ) args))
 
+
+---
+
+-- | Typecheck an entire function definition (including its’ body)
+checkDefinition :: Definition -> State Env ()
+checkDefinition (Definition typ _ args (Block body)) = withNewScope $ do
+  mapM_ (\(Arg typ id) -> addVar id typ) args
+  checkStatements typ body
+
+-- | Make sure a function always returns
 checkReturn :: Definition -> State Env Bool
 checkReturn (Definition TVoid _ _ _)        = return True
 checkReturn (Definition _ _ _ (Block stms)) = checkReturnStms stms
@@ -67,20 +75,14 @@ checkReturn (Definition _ _ _ (Block stms)) = checkReturnStms stms
                                                              else checkReturnStms stms
         _                     -> checkReturnStms stms
 
--- 
-checkDefinition :: Definition -> State Env ()
-checkDefinition (Definition t _ args (Block stms)) = withNewScope $ do
-  mapM_ (\(Arg t id) -> addVar id t) args
-  checkStms t stms
 
 checkBlock :: Type -> Block -> State Env ()
-checkBlock rett (Block stms) = withNewScope $ checkStms rett stms
+checkBlock returns (Block body) = withNewScope $ checkStms returns body
 
 checkStms :: Type -> [Statement] -> State Env ()
 checkStms _    []         = return ()
 checkStms rett (stm:stms) = do checkStm  rett stm
                                checkStms rett stms
-
 
 checkStm :: Type -> Statement -> State Env ()
 checkStm rett stm = case stm of
@@ -107,7 +109,7 @@ checkStm rett stm = case stm of
                                 if t == TBool 
                                    then do checkStm rett stm
                                    else typeError e [TBool] t 
-    (SExpr e)             -> void (infer e)
+    (SExpr e)             -> infer e >> return ()
     
 
 varDecl :: Type -> Declaration -> State Env ()
@@ -187,13 +189,6 @@ typeError e ts t' = fail (printTree e ++ " has type " ++ printTree t'
                           treeify [a]    = printTree a
                           treeify [a, b] = printTree a ++ " or " ++ printTree b
                           treeify (a:as) = printTree a ++ ", " ++ printTree as
-
---
--- Utility
---
-
-void :: (Monad m) => m a -> m ()
-void = (>> return ())
 
 --
 -- Environment
