@@ -32,7 +32,7 @@ collectDefinitions defs = mapM_ finder defs
     finder (Definition returns name args _) = 
       addVar name (TFun returns (map (\(Arg t _) -> t) args))
 
--- 
+-- | Typecheck an entire function definition (including its’ body)
 checkDefinition :: Definition -> State Env ()
 checkDefinition (Definition t _ args (Block stms)) = withNewScope $ do
   mapM_ (\(Arg t id) -> addVar id t) args
