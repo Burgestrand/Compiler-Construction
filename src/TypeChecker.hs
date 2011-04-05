@@ -20,7 +20,7 @@ type Scope    = Map.Map Ident Type
 typecheck :: Program -> Env
 typecheck (Program defs) = flip execState emptyEnv $ do
   collectDefs defs
-  
+  sequence_ $ map checkDef defs
   -- checkReturns defs
   
 
