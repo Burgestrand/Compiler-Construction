@@ -46,7 +46,8 @@ data Type =
   deriving (Eq,Ord,Show)
 
 data Expr =
-   EInc Ident
+   ETyped Type Expr
+ | EInc Ident
  | EDec Ident
  | EVar Ident
  | EInt Integer

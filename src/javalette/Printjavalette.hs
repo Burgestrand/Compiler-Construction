@@ -150,6 +150,7 @@ instance Print Type where
 
 instance Print Expr where
   prt i e = case e of
+   ETyped type' expr -> prPrec i 8 (concatD [prt 0 type' , prt 0 expr])
    EInc id -> prPrec i 7 (concatD [prt 0 id , doc (showString "++")])
    EDec id -> prPrec i 7 (concatD [prt 0 id , doc (showString "--")])
    EVar id -> prPrec i 7 (concatD [prt 0 id])

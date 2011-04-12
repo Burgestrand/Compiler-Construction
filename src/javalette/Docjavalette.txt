@@ -89,6 +89,7 @@ All other symbols are terminals.
   | //[Type]// | -> | **eps**
   |  |  **|**  | //Type// 
   |  |  **|**  | //Type// ``,`` //[Type]// 
+  | //Expr8// | -> | 
   | //Expr7// | -> | //Ident// ``++`` 
   |  |  **|**  | //Ident// ``--`` 
   |  |  **|**  | //Ident// 

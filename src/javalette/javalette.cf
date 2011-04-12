@@ -43,7 +43,7 @@ separator      Type ",";
 
 -- Expressions ---------------------------------------------
 
-
+internal ETyped. Expr8 ::= Type Expr;
 EInc.      Expr7 ::= Ident "++";
 EDec.      Expr7 ::= Ident "--";
 EVar.      Expr7 ::= Ident;
