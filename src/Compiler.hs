@@ -1,38 +1,55 @@
-module Compiler where
+data CompileState = CompileState {Env :: env, stacksize :: Integer, maxstack :: Integer, nextlabel :: Integer, code :: String}
 
-import AST
+type Compiling = State CompileState
 
-import Data.List
+compileProgram :: Program -> String
 
--- | Typeclass for things that can be compiled to Javalette. Define an
---   instance of this to be able to compile your data types properly.
-class Compilable a where
-  compile :: a -> String
+compileDefinition :: Env -> Definition -> String
 
-instance Compilable Char where
-  compile char = [char]
+compileBlock :: Compiling String
 
-instance Compilable a => Compilable [a] where
-  compile xs = concat $ intersperse ", " $ map (\xs -> map compile xs) (permutations xs)
+compileStatement :: Compiling String
 
-instance Compilable Program where
-  compile (Program xs) = concat $ intersperse "\n" $ map compile xs
+compileExpr :: Compiling String
 
-instance Compilable Definition where
-  compile (Definition returns name args code) = 
-    compile returns ++ " " ++ compile name ++ "(" ++ compile args ++ ")"
+-- Help functions
 
-instance Compilable Ident where
-  compile (Ident id) = id
+getLabel    :: Compiling Label
+goto        :: Label -> Compiling String
+label       :: Label -> Compiling String
+pushInt     :: Integer -> Compiling String
+pushDouble  :: Double -> Compiling String
+pushString  :: String -> Compiling String
+pushBool    :: Bool -> Compiling String
+pop         :: Compiling String
 
-instance Compilable Arg where
-  compile (Arg t id) = compile t ++ " " ++ compile id
 
-instance Compilable Type where
-  compile TInt    = "int"
-  compile TDouble = "double"
-  compile TBool   = "boolean"
-  compile TVoid   = "void"
-  compile (TFun returns args) = let
-      argxs = concat $ intersperse "," $ map compile args
-    in concat [compile returns, "(", argxs, ")"]
+t1 <- complie e
+emit ".stacksize" getStackSize
+emit t1
+
+type CompileM = State { stacksize :: Integer, output :: String }
+
+compile $ do
+  l <- getLabel
+  push "Hello world"
+  push "Yes"
+  invoke "java.lang.String.concat"
+  pop
+  return
+
+compile :: CompileM -> String
+compile m = do
+  result <- run m
+  stacksize ++ output
+  
+  
+program :: Program -> name -> Code
+definintion :: (Env, Definition) -> Code
+Statement :: (Env, Statement) -> Stacksize -> MaxStack -> labelgen -> (Stacksize, MaxStack, labelgen, Code)
+Expr :: (Env, Expr) -> Stacksize -> MaxStack -> (Stacksize, MaxStack, Code)
+
+
+
+
+
