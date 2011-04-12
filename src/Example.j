@@ -3,8 +3,11 @@
 .super java/lang/Object
 
 .method public static main([Ljava/lang/String;)V
-.limit stack 1
-  bipush 0
-  invokestatic java/lang/System/exit(I)V
+  .limit locals 1
+  .limit stack 2
+  
+  ldc2_w 3.14
+  invokestatic Runtime/printDouble(D)V
+  
   return
 .end method
