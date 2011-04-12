@@ -1,2 +1,3 @@
 #!/bin/bash
+javac -d ./bin src/Runtime.java
 java -jar lib/jasmin.jar -d ./bin "$@"
