@@ -46,6 +46,7 @@ separator      Type ",";
 
 -- Expressions ---------------------------------------------
 
+internal ETyped. Expr8 ::= Type Expr;
 EVar.      Expr7 ::= Ident;
 EInt.      Expr7 ::= Integer;
 EDouble.   Expr7 ::= Double;

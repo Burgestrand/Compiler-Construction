@@ -67,7 +67,12 @@ transType x = case x of
 
 transExpr :: Expr -> Result
 transExpr x = case x of
+<<<<<<< HEAD
+=======
   ETyped type' expr  -> failure x
+  EInc id  -> failure x
+  EDec id  -> failure x
+>>>>>>> 83d290b5eb07c1a207ff063cb332b51b3d577654
   EVar id  -> failure x
   EInt n  -> failure x
   EDouble d  -> failure x

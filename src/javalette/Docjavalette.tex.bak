@@ -150,11 +150,17 @@ All other symbols are terminals.\\
 \end{tabular}\\
 
 \begin{tabular}{lll}
+<<<<<<< HEAD
+{\nonterminal{Expr7}} & {\arrow}  &{\nonterminal{Ident}}  \\
+=======
 {\nonterminal{Expr8}} & {\arrow}  & \\
 \end{tabular}\\
 
 \begin{tabular}{lll}
-{\nonterminal{Expr7}} & {\arrow}  &{\nonterminal{Ident}}  \\
+{\nonterminal{Expr7}} & {\arrow}  &{\nonterminal{Ident}} {\terminal{{$+$}{$+$}}}  \\
+ & {\delimit}  &{\nonterminal{Ident}} {\terminal{{$-$}{$-$}}}  \\
+ & {\delimit}  &{\nonterminal{Ident}}  \\
+>>>>>>> 83d290b5eb07c1a207ff063cb332b51b3d577654
  & {\delimit}  &{\nonterminal{Integer}}  \\
  & {\delimit}  &{\nonterminal{Double}}  \\
  & {\delimit}  &{\nonterminal{LBool}}  \\

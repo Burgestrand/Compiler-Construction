@@ -18,11 +18,12 @@ type FailStateM = StateT Env Err
 -- Typechecker
 --
 
-typecheck :: Program -> Err ()
+typecheck :: Program -> Err Program
 typecheck (Program defs) = flip evalStateT emptyEnv $ do
   collectDefinitions defs       -- Fills enviroment with function signatures
-  mapM_ checkDefinition defs    -- Typechecks all functions
+  defs <- mapM checkDefinition defs    -- Typechecks all functions
   mapM_ checkReturn defs        -- Check that all functions return
+  return (Program defs)
 
 -- | Iterate through all function definitions, modifying the environment
 --   by adding them and their types to it.
@@ -35,10 +36,11 @@ collectDefinitions defs = mapM_ finder defs
 ---
 
 -- | Typecheck an entire function definition (including its’ body)
-checkDefinition :: Definition -> FailStateM ()
-checkDefinition (Definition typ _ args (Block body)) = withNewScope $ do
+checkDefinition :: Definition -> FailStateM Definition
+checkDefinition (Definition typ x args (Block body)) = withNewScope $ do
   mapM_ (\(Arg typ id) -> addVar id typ) args
-  checkStatements typ body
+  body <- checkStatements typ body
+  return (Definition typ x args (Block body))
 
 -- | Make sure a function always returns
 checkReturn :: Definition -> FailStateM ()
@@ -82,16 +84,20 @@ checkReturn (Definition _ name  _ (Block stms)) = do
 
 
 -- 
-checkBlock :: Type -> Block -> FailStateM ()
-checkBlock returns (Block body) = withNewScope (checkStatements returns body)
+checkBlock :: Type -> Block -> FailStateM Block
+checkBlock returns (Block body) = withNewScope $ do
+  body <- checkStatements returns body
+  return (Block body)
 
-checkStatements :: Type -> [Statement] -> FailStateM ()
-checkStatements returns ss = mapM_ (checkStatement returns) ss
+checkStatements :: Type -> [Statement] -> FailStateM [Statement]
+checkStatements returns ss = do
+  mapM (checkStatement returns) ss
+  return ss
 
 checkStatement :: Type -> Statement -> FailStateM ()
 checkStatement rett stm = case stm of
     (SEmpty)              -> return ()
-    (SBlock b)            -> checkBlock rett b
+    (SBlock b)            -> checkBlock rett b >> return ()
     (SDeclaration t ds) -> mapM_ (varDecl t) ds
     (SReturn e)           -> do t <- infer e
                                 if t /= rett 
