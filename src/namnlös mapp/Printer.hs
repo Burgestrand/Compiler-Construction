@@ -1,1 +1,0 @@
-javalette/Printjavalette.hs
