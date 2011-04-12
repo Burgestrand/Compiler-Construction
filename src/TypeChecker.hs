@@ -18,11 +18,12 @@ type FailStateM = StateT Env Err
 -- Typechecker
 --
 
-typecheck :: Program -> Err ()
+typecheck :: Program -> Err Program
 typecheck (Program defs) = flip evalStateT emptyEnv $ do
   collectDefinitions defs       -- Fills enviroment with function signatures
   mapM_ checkDefinition defs    -- Typechecks all functions
   mapM_ checkReturn defs        -- Check that all functions return
+  return (Program defs)
 
 -- | Iterate through all function definitions, modifying the environment
 --   by adding them and their types to it.
