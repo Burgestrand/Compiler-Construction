@@ -1,5 +1,20 @@
 SOURCE = "src/Example.j"
 
+task :grammarcompile do
+  Dir.chdir 'src/javalette' do
+    system <<-BASH
+      bnfc javalette.cf;
+      rm *.bak;
+      alex *.x;
+      happy *.y;
+      sed -e 's/Absjavalette/AST/g' -e 's/Lexjavalette/Lexer/g' -e 's/Parjavalette/Parser/g' -e 's/Printjavalette/Printer/g' Absjavalette.hs >../AST.hs
+      sed -e 's/Absjavalette/AST/g' -e 's/Lexjavalette/Lexer/g' -e 's/Parjavalette/Parser/g' -e 's/Printjavalette/Printer/g' Lexjavalette.hs >../Lexer.hs
+      sed -e 's/Absjavalette/AST/g' -e 's/Lexjavalette/Lexer/g' -e 's/Parjavalette/Parser/g' -e 's/Printjavalette/Printer/g' Parjavalette.hs >../Parser.hs 
+      sed -e 's/Absjavalette/AST/g' -e 's/Lexjavalette/Lexer/g' -e 's/Parjavalette/Parser/g' -e 's/Printjavalette/Printer/g' Printjavalette.hs >../Printer.hs      
+    BASH
+  end
+end
+
 task :compile do
   system <<-BASH
     javac -d ./bin src/Runtime.java;
@@ -13,4 +28,4 @@ task :execute do
   end
 end
 
-task :default => [:compile, :execute]
+task :default => [:grammarcompile, :compile, :execute]
