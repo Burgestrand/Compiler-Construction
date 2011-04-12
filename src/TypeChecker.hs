@@ -44,39 +44,41 @@ checkDefinition (Definition typ _ args (Block body)) = withNewScope $ do
 checkReturn :: Definition -> FailStateM ()
 checkReturn (Definition TVoid _ _ _)            = return ()
 checkReturn (Definition _ name  _ (Block stms)) = do
-  returning <- checkReturnStms stms
+  returning <- checkReturnStatements stms
   unless returning $ 
     fail $ "Function " ++ show name ++ " cannot safely be assumed to return"
   where
-    checkReturnStms []         = return False
-    checkReturnStms (stm:stms) = case stm of
-        (SBlock (Block stms2))-> do r1 <- checkReturnStms stms2 
+    -- | Checks if the statements always return
+    checkReturnStatements :: [Statements] -> State Env Bool
+    checkReturnStatements []         = return False
+    checkReturnStatements (stm:stms) = case stm of
+        (SBlock (Block stms2))-> do r1 <- checkReturnStatements stms2 
                                     if r1 
                                        then return True
-                                       else checkReturnStms stms
+                                       else checkReturnStatements stms
         (SReturn e)           -> return True
         (SReturnV)            -> return True
         (SIf e tstm)          -> case e of
-                                     (EBool LTrue) -> do r1 <- checkReturnStms [tstm]
+                                     (EBool LTrue) -> do r1 <- checkReturnStatements [tstm]
                                                          if r1
                                                             then return True
-                                                            else checkReturnStms stms
-                                     _             -> checkReturnStms stms                     
+                                                            else checkReturnStatements stms
+                                     _             -> checkReturnStatements stms                     
         (SIfElse e tstm fstm) -> case e of
-                                     (EBool LTrue) -> do r1 <- checkReturnStms [tstm]
+                                     (EBool LTrue) -> do r1 <- checkReturnStatements [tstm]
                                                          if r1
                                                             then return True
-                                                            else checkReturnStms stms
-                                     (EBool LFalse) -> do r1 <- checkReturnStms [fstm]
+                                                            else checkReturnStatements stms
+                                     (EBool LFalse) -> do r1 <- checkReturnStatements [fstm]
                                                           if r1
                                                              then return True
-                                                             else checkReturnStms stms
-                                     _              -> do r1 <- checkReturnStms [tstm]
-                                                          r2 <- checkReturnStms [fstm]
+                                                             else checkReturnStatements stms
+                                     _              -> do r1 <- checkReturnStatements [tstm]
+                                                          r2 <- checkReturnStatements [fstm]
                                                           if r1 && r2
                                                              then return True
-                                                             else checkReturnStms stms
-        _                     -> checkReturnStms stms
+                                                             else checkReturnStatements stms
+        _                     -> checkReturnStatements stms
 
 
 -- 
