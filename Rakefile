@@ -1,7 +1,10 @@
 SOURCE = "src/Example.j"
 
 task :compile do
-  system "./compile #{SOURCE}"
+  system <<-BASH
+    javac -d ./bin src/Runtime.java;
+    java -jar lib/jasmin.jar -d ./bin "#{SOURCE}";
+  BASH
 end
 
 task :execute do
