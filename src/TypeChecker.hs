@@ -111,6 +111,16 @@ checkStatement rett stm = case stm of
                                 if t == TBool 
                                    then do checkStatement rett stm
                                    else typeError e [TBool] t 
+    (SInc id)             -> do t <- lookupVar id
+                                if t == Tint 
+                                   then return ()
+                                   else typeError id [TInt] t
+    (SDec id)             -> checkStatement rett (SInc id)
+    (SAss id e)           -> do t1 <- lookupVar id
+                                t2 <- infer e
+                                if t1 == t2
+                                   then return ()
+                                   else typeError id [t1] t2
     (SExpr e)             -> infer e >> return ()
     
 

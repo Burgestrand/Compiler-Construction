@@ -25,6 +25,9 @@ SReturnV.     Statement ::= "return" ";";
 SIf.          Statement ::= "if" "(" Expr ")" Statement;
 SIfElse.      Statement ::= "if" "(" Expr ")" Statement "else" Statement;
 SWhile.       Statement ::= "while" "(" Expr ")" Statement;
+SInc.         Statement ::= Ident "++";
+SDec.         Statement ::= Ident "--";
+SAss.         Statement ::= Ident "=" Expr;
 SExpr.        Statement ::= Expr ";";
 
 DNoInit.           Declaration ::= Ident; 
@@ -43,9 +46,6 @@ separator      Type ",";
 
 -- Expressions ---------------------------------------------
 
-
-EInc.      Expr7 ::= Ident "++";
-EDec.      Expr7 ::= Ident "--";
 EVar.      Expr7 ::= Ident;
 EInt.      Expr7 ::= Integer;
 EDouble.   Expr7 ::= Double;
@@ -60,7 +60,6 @@ EEqu.      Expr3 ::= Expr3 EquOp Expr4;
 ERel.      Expr3 ::= Expr3 RelOp Expr4;
 EAnd.      Expr2 ::= Expr3 "&&" Expr2;
 EOr.       Expr1 ::= Expr2 "||" Expr1;
-EAss.      Expr  ::= Ident "=" Expr;
 coercions  Expr 7;
 separator  Expr ",";
 
