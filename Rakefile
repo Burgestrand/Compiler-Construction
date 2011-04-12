@@ -1,4 +1,4 @@
-SOURCE = "src/Testing.j"
+SOURCE = "src/Example.j"
 
 task :compile do
   system "./compile #{SOURCE}"
