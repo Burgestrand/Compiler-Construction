@@ -51,7 +51,6 @@ checkReturn (Definition _ name  _ (Block stms)) = do
     fail $ "Function " ++ show name ++ " cannot safely be assumed to return"
   where
     -- | Checks if the statements always return
-    checkReturnStatements :: [Statements] -> State Env Bool
     checkReturnStatements []         = return False
     checkReturnStatements (stm:stms) = case stm of
         (SBlock (Block stms2))-> do r1 <- checkReturnStatements stms2 
@@ -120,7 +119,7 @@ checkStatement rett stm = case stm of
                                    then do checkStatement rett stm
                                    else typeError e [TBool] t 
     (SInc id)             -> do t <- lookupVar id
-                                if t == Tint 
+                                if t == TInt 
                                    then return ()
                                    else typeError id [TInt] t
     (SDec id)             -> checkStatement rett (SInc id)
@@ -143,11 +142,6 @@ varDecl t decl = case decl of
                                     
 infer :: Expr -> FailStateM Type
 infer e = case e of  
-    (EInc id)          -> do t <- lookupVar id
-                             if t `elem` [TInt, TDouble] 
-                                then return t
-                                else typeError id [TInt, TDouble] t
-    (EDec id)          -> infer (EInc id)
     (EVar id)          -> lookupVar id
     (EInt _)           -> return TInt    
     (EDouble _)        -> return TDouble 
@@ -195,11 +189,6 @@ infer e = case e of
                                      else typeError e2 [t1] t2
                                 else typeError e1 [TBool] t1
     (EOr e1 e2)        -> infer (EAnd e1 e2)
-    (EAss id e)        -> do vt <- lookupVar id
-                             et <- infer e
-                             if et == vt 
-                                then return et
-                                else typeError e [vt] et
                             
                             
 typeError :: (Monad m, Print a) => a -> [Type] -> Type -> m x
