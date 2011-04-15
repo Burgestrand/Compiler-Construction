@@ -1,4 +1,5 @@
-SOURCE = "src/Example.j"
+SOURCE = File.expand_path('code.jl')
+TARGET = SOURCE.gsub(/\.jl\z/, '.j')
 
 task :grammarcompile do
   Dir.chdir 'src/javalette' do
@@ -16,16 +17,18 @@ task :grammarcompile do
 end
 
 task :compile do
-  system <<-BASH
-    javac -d ./bin src/Runtime.java;
-    java -jar lib/jasmin.jar -d ./bin "#{SOURCE}";
-  BASH
+  system 'javac -d ./bin src/Runtime.java'
+  system [
+    'cd src',
+    "runghc jlc.hs '#{SOURCE}' > '#{TARGET}'",
+    %Q{java -jar ../lib/jasmin.jar -d ../bin '#{TARGET}'},
+  ].join(" && ")
 end
 
 task :execute do
   Dir.chdir 'bin' do
-    puts "Result: " << system("java #{File.basename(SOURCE, ".j")}").inspect
+    puts "Result: " << system("java #{File.basename(SOURCE, ".jl").capitalize}").inspect
   end
 end
 
-task :default => [:grammarcompile, :compile, :execute]
+task :default => [:compile, :execute]
