@@ -18,17 +18,16 @@ end
 
 task :compile do
   system 'javac -d ./bin src/Runtime.java'
-  system [
+  result = system [
     'cd src',
     "runghc jlc.hs '#{SOURCE}' > '#{TARGET}'",
     %Q{java -jar ../lib/jasmin.jar -d ../bin '#{TARGET}'},
+    "cd ../bin",
+    "java #{File.basename(SOURCE, ".jl").capitalize}",
   ].join(" && ")
+  
+  puts
+  puts "Result: #{result}"
 end
 
-task :execute do
-  Dir.chdir 'bin' do
-    puts "Result: " << system("java #{File.basename(SOURCE, ".jl").capitalize}").inspect
-  end
-end
-
-task :default => [:compile, :execute]
+task :default => [:compile]
