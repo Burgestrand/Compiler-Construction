@@ -1,55 +1,28 @@
-data CompileState = CompileState {Env :: env, stacksize :: Integer, maxstack :: Integer, nextlabel :: Integer, code :: String}
+module Compiler (compile) where
 
-type Compiling = State CompileState
+import AST
 
-compileProgram :: Program -> String
+import Control.Monad.Identity
+import Control.Monad.State
+import Control.Monad.Writer
 
-compileDefinition :: Env -> Definition -> String
+type Compiling = WriterT Code (StateT Compilation Identity)
 
-compileBlock :: Compiling String
+type Code = [String]
+data Compilation = Compilation {
+  stacksize   :: Integer, -- | Your average counter
+  maxstack    :: Integer  -- | Highest value the counter ever reaches
+}
 
-compileStatement :: Compiling String
-
-compileExpr :: Compiling String
-
--- Help functions
-
-getLabel    :: Compiling Label
-goto        :: Label -> Compiling String
-label       :: Label -> Compiling String
-pushInt     :: Integer -> Compiling String
-pushDouble  :: Double -> Compiling String
-pushString  :: String -> Compiling String
-pushBool    :: Bool -> Compiling String
-pop         :: Compiling String
-
-
-t1 <- complie e
-emit ".stacksize" getStackSize
-emit t1
-
-type CompileM = State { stacksize :: Integer, output :: String }
-
-compile $ do
-  l <- getLabel
-  push "Hello world"
-  push "Yes"
-  invoke "java.lang.String.concat"
-  pop
-  return
-
-compile :: CompileM -> String
-compile m = do
-  result <- run m
-  stacksize ++ output
-  
-  
-program :: Program -> name -> Code
-definintion :: (Env, Definition) -> Code
-Statement :: (Env, Statement) -> Stacksize -> MaxStack -> labelgen -> (Stacksize, MaxStack, labelgen, Code)
-Expr :: (Env, Expr) -> Stacksize -> MaxStack -> (Stacksize, MaxStack, Code)
-
-
-
-
-
+compile :: Program -> String
+compile program = unlines [
+  ".class public Code",
+  ".super java/lang/Object",
+  ".method public static main([Ljava/lang/String;)V",
+  "  .limit locals 1",
+  "  .limit stack 2",
+  "  ldc2_w 3.14",
+  "  invokestatic Runtime/printDouble(D)V",
+  "  return",
+  ".end method"
+  ]
