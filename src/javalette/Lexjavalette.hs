@@ -1,7 +1,7 @@
 {-# OPTIONS -cpp #-}
 {-# LINE 3 "Lexjavalette.x" #-}
 
-module Lexer where
+module Lexjavalette where
 
 import ErrM
 

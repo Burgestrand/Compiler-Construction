@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -fno-warn-overlapping-patterns #-}
-module Parser where
+module Parjavalette where
 import Absjavalette
 import Lexjavalette
 import ErrM
