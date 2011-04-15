@@ -3,13 +3,10 @@ module Main where
 import ErrM
 import Parser
 import TypeChecker
+import Compiler
 
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
-
--- | Compile the file at the given path containing jasmine code.
-jasmin :: FilePath -> IO ()
-jasmin = undefined
 
 -- aliases
 parselex = pProgram . myLexer
@@ -19,8 +16,14 @@ main = do
   args <- getArgs
   case args of
     [file] -> do
-      program <- parselex `fmap` readFile file
+      source  <- readFile file
+      program <- return $ do
+        program <- parselex source
+        program <- typecheck program
+        return (compile program)
+      
       case program of
-        Ok  x -> print $ (typecheck x)
-        Bad s -> error s
+        Ok  source  -> putStr source
+        Bad message -> error message
+      
     _      -> error "Usage: jlc path/to/javalette/source.jl"
