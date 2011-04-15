@@ -14,15 +14,13 @@ data Compilation = Compilation {
   maxstack    :: Integer  -- | Highest value the counter ever reaches
 }
 
-compile :: Program -> String
-compile program = unlines [
-  ".class public Code",
-  ".super java/lang/Object",
-  ".method public static main([Ljava/lang/String;)V",
-  "  .limit locals 1",
-  "  .limit stack 2",
-  "  ldc2_w 3.14",
-  "  invokestatic Runtime/printDouble(D)V",
-  "  return",
-  ".end method"
-  ]
+compile :: String -> Program -> String
+compile name program = (++) header $ runIdentity $ do
+    let (Program xs) = program
+    return (show xs)
+  where header = unlines [".class public " ++ name,
+                          ".super java/lang/Object",
+                          ".method public static main([Ljava/lang/String;)V",
+                          "  invokestatic " ++ name ++ "/main()I",
+                          "  invokestatic java/lang/System/exit(I)V",
+                          ".end method"] ++ "\n"
