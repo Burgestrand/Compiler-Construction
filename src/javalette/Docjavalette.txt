@@ -43,8 +43,8 @@ The reserved words used in javalette are the following:
 
 The symbols used in javalette are the following:
   | , | ( | ) | {
-  | } | ; | = | ++
-  | -- | - | ! | &&
+  | } | ; | ++ | --
+  | = | - | ! | &&
   | || | + | * | /
   | % | == | != | <
   | <= | > | >= | 
@@ -77,6 +77,9 @@ All other symbols are terminals.
   |  |  **|**  | ``if`` ``(`` //Expr// ``)`` //Statement// 
   |  |  **|**  | ``if`` ``(`` //Expr// ``)`` //Statement// ``else`` //Statement// 
   |  |  **|**  | ``while`` ``(`` //Expr// ``)`` //Statement// 
+  |  |  **|**  | //Ident// ``++`` 
+  |  |  **|**  | //Ident// ``--`` 
+  |  |  **|**  | //Ident// ``=`` //Expr// 
   |  |  **|**  | //Expr// ``;`` 
   | //Declaration// | -> | //Ident// 
   |  |  **|**  | //Ident// ``=`` //Expr// 
@@ -90,9 +93,7 @@ All other symbols are terminals.
   |  |  **|**  | //Type// 
   |  |  **|**  | //Type// ``,`` //[Type]// 
   | //Expr8// | -> | 
-  | //Expr7// | -> | //Ident// ``++`` 
-  |  |  **|**  | //Ident// ``--`` 
-  |  |  **|**  | //Ident// 
+  | //Expr7// | -> | //Ident// 
   |  |  **|**  | //Integer// 
   |  |  **|**  | //Double// 
   |  |  **|**  | //LBool// 
@@ -113,8 +114,7 @@ All other symbols are terminals.
   |  |  **|**  | //Expr3// 
   | //Expr1// | -> | //Expr2// ``||`` //Expr1// 
   |  |  **|**  | //Expr2// 
-  | //Expr// | -> | //Ident// ``=`` //Expr// 
-  |  |  **|**  | //Expr1// 
+  | //Expr// | -> | //Expr1// 
   | //[Expr]// | -> | **eps**
   |  |  **|**  | //Expr// 
   |  |  **|**  | //Expr// ``,`` //[Expr]// 
