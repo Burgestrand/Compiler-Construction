@@ -31,10 +31,6 @@ emit x = tell [x] >> return x
 directive :: String -> String -> Jasmin Code
 directive name args = emit ("." ++ name ++ " " ++ args)
 
--- | Emit a method declaration and then assemble the contents.
-method :: (Compileable x) => String -> [Arg] -> x -> Jasmin Code
-method name args body = undefined
-
 ---
 
 instance Compileable Definition where
