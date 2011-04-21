@@ -24,6 +24,7 @@ data Compilation = Compilation {
 class Compileable x where
   assemble :: x -> Jasmin Code
 
+-- | Emit a piece of code verbatim.
 emit :: Code -> Jasmin Code
 emit x = tell [x] >> return x
 
