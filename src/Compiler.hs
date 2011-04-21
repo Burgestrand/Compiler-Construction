@@ -35,9 +35,22 @@ directive name args = emit ("." ++ name ++ " " ++ args)
 ---
 
 instance Compileable Definition where
-  assemble (Definition return (Ident name) args (Block code)) = do
+  assemble (Definition returns (Ident name) args (Block code)) = do
     args <- intercalate ";" `fmap` mapM assemble args
-    directive "method" ("public static " ++ name ++ "(" ++ args ++ ")")
+    let signature  = "public static " ++ name
+    let returntype = case returns of
+                     TInt    -> "I"
+                     TDouble -> "D"
+                     TBool   -> "B"
+                     TVoid   -> "V"
+    
+    directive "method" (signature ++ "(" ++ args ++ ")" ++ returntype)
+    
+    -- always return 0 in all methods ftw
+    directive "limit" "stack 1"
+    emit "iconst_0"
+    emit "ireturn"
+    
     directive "end" "method"
 
 instance Compileable Arg where
