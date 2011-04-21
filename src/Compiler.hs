@@ -56,9 +56,10 @@ compiler x = intercalate "\n" $ execWriter $ runStateT (assemble x) (Compilation
 compile :: String -> Program -> Code
 compile name (Program fs) = header ++ functions
   where header = unlines [".class public " ++ name,
-                          ".super java/lang/Object",
+                          ".super java/lang/Object\n",
                           ".method public static main([Ljava/lang/String;)V",
                           "  invokestatic " ++ name ++ "/main()I",
                           "  invokestatic java/lang/System/exit(I)V",
+                          "  return",
                           ".end method"] ++ "\n"
         functions = intercalate "\n\n" (map compiler fs)
