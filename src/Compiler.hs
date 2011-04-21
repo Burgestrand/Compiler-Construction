@@ -14,9 +14,10 @@ type Jasmin = StateT Compilation (Writer Lines)
 
 type Lines = [Code]
 type Code  = String
+type Stack = (Integer, Integer) -- | (Current, Maximum)
 data Compilation = Compilation {
-  stacksize   :: Integer, -- | Your average counter
-  maxstack    :: Integer  -- | Highest value the counter ever reaches
+  -- | (Current, Maximum)
+  stack :: Stack
 }
 
 ---
@@ -62,7 +63,8 @@ instance Compileable Arg where
 ---
 
 compiler :: (Compileable x) => x -> Code
-compiler x = intercalate "\n" $ execWriter $ runStateT (assemble x) (Compilation 0 0) 
+compiler x = intercalate "\n" $ execWriter $ runStateT (assemble x) state
+  where state = Compilation (0, 0) 
 
 ---
 
