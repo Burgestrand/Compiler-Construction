@@ -25,9 +25,28 @@ data Compilation = Compilation {
 class Compileable x where
   assemble :: x -> Jasmin Code
 
+-- > Low Level
+
 -- | Emit a piece of code verbatim.
 emit :: Code -> Jasmin Code
 emit x = tell [x] >> return x
+
+-- | Modify the stack with a user-given function, returning the return value.
+stackmod :: (Stack -> Stack) -> Jasmin Stack
+stackmod fn = do
+  stack <- (fn . stack) `fmap` get
+  modify (\state -> state { stack = stack })
+  return stack
+
+-- | Increase the stack size, returning the new Stack.
+stackyay :: Jasmin Stack
+stackyay = stackmod (\(x, y) -> (x + 1, max (x + 1) y))
+
+-- | Decrease the stack size, returnin gthe new Stack.
+stackboo :: Jasmin Stack
+stackboo = stackmod (\(x, y) -> (x - 1, y))
+
+-- > High Level
 
 -- | Emit a directive with the specified name and parameters.
 directive :: String -> String -> Jasmin Code
