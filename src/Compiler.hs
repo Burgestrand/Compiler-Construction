@@ -83,7 +83,7 @@ jreturn TVoid   = emit "return"
 ---
 
 instance Compileable Definition where
-  assemble (Definition returns (Ident name) args (Block code)) = do
+  assemble (Definition returns (Ident name) args code) = do
     args <- intercalate ";" `fmap` mapM assemble args
     let signature  = "public static " ++ name
     let returntype = case returns of
@@ -93,12 +93,7 @@ instance Compileable Definition where
                      TVoid   -> "V"
     
     directive "method" (signature ++ "(" ++ args ++ ")" ++ returntype)
-    
-    -- always return 0 in all methods ftw
-    directive "limit" "stack 1"
-    emit "iconst_0"
-    emit "ireturn"
-    
+    assemble code
     directive "end" "method"
 
 instance Compileable Arg where
@@ -106,6 +101,32 @@ instance Compileable Arg where
     TInt    -> "I"
     TDouble -> "D"
     TBool   -> "B"
+
+instance Compileable Block where
+  assemble (Block code) = concat `fmap` mapM assemble code
+
+instance Compileable Statement where
+  assemble (SReturnV)  = jreturn TVoid
+  assemble (SReturn e) = do -- TODO: ETyped tp e
+      if is_literal e
+         then push e
+         else assemble e
+      
+      jreturn (type_of e)
+    where
+      is_literal (EInt _)    = True
+      is_literal (EDouble _) = True
+      is_literal (EBool _)   = True
+      is_literal _           = False
+      
+      type_of (EInt _)    = TInt
+      type_of (EDouble _) = TDouble
+      type_of (EBool _)   = TBool
+  
+  assemble x = error (show x)
+
+instance Compileable Expr where
+  assemble x = error (show x)
 
 ---
 
