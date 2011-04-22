@@ -93,7 +93,10 @@ instance Compileable Definition where
                      TVoid   -> "V"
     
     directive "method" (signature ++ "(" ++ args ++ ")" ++ returntype)
-    assemble code
+    pass $ do
+      assemble code
+      (_, s) <- gets stack
+      return ((), ((".limit stack " ++ show s):))
     directive "end" "method"
 
 instance Compileable Arg where
