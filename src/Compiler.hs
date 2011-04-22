@@ -52,6 +52,25 @@ stackboo = stackmod (\(x, y) -> (x - 1, y))
 directive :: String -> String -> Jasmin Code
 directive name args = emit ("." ++ name ++ " " ++ args)
 
+-- | Push an expression constant, also modifying the stack.
+push :: Expr -> Jasmin Code
+push expr = do
+    let value = case expr of
+                (EInt x)    -> show x
+                (EString x) -> show x
+                (EBool LTrue)  -> "1"
+                (EBool LFalse) -> "0"
+    
+    fn <- if is_double expr
+          then stackyay >> return "ldc2_w "
+          else return "ldc "
+    
+    stackyay
+    emit $ fn ++ value
+  where
+    is_double (EDouble _) = True
+    is_double _           = False
+
 ---
 
 instance Compileable Definition where
