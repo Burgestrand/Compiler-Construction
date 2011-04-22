@@ -57,6 +57,7 @@ push :: Expr -> Jasmin Code
 push expr = do
     let value = case expr of
                 (EInt x)    -> show x
+                (EDouble x) -> show x
                 (EString x) -> show x
                 (EBool LTrue)  -> "1"
                 (EBool LFalse) -> "0"
