@@ -70,6 +70,15 @@ push expr = do
   where
     is_double (EDouble _) = True
     is_double _           = False
+    
+
+-- | Return a value of a given type.
+-- TODO: Modify stack?
+jreturn :: Type -> Jasmin Code
+jreturn TDouble = emit "dreturn"
+jreturn TBool   = emit "ireturn"
+jreturn TInt    = emit "ireturn"
+jreturn TVoid   = emit "return"
 
 ---
 
