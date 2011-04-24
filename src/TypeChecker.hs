@@ -33,8 +33,6 @@ collectDefinitions defs = mapM_ finder defs
     finder (Definition returns name args _) = 
       addVar name (TFun returns (map (\(Arg typ _) -> typ) args))
 
----
-
 -- | Typecheck an entire function definition (including its’ body)
 checkDefinition :: Definition -> FailStateM Definition
 checkDefinition (Definition typ x args (Block body)) = withNewScope $ do
@@ -51,6 +49,7 @@ checkReturn (Definition _ name  _ (Block stms)) = do
     fail $ "Function " ++ show name ++ " cannot safely be assumed to return"
   where
     -- | Checks if the statements always return
+    checkReturnStatements :: [Statement] -> FailStateM Bool
     checkReturnStatements []         = return False
     checkReturnStatements (stm:stms) = case stm of
         (SBlock (Block stms2))-> do r1 <- checkReturnStatements stms2 
