@@ -97,109 +97,132 @@ checkBlock returns (Block body) = withNewScope $ do
   return (Block body)
 
 checkStatements :: Type -> [Statement] -> FailStateM [Statement]
-checkStatements returns ss = do
-  mapM (checkStatement returns) ss
-  return ss
+checkStatements returns ss = mapM (checkStatement returns) ss
 
-checkStatement :: Type -> Statement -> FailStateM ()
+checkStatement :: Type -> Statement -> FailStateM Statement
 checkStatement rett stm = case stm of
-    (SEmpty)              -> return ()
-    (SBlock b)            -> checkBlock rett b >> return ()
-    (SDeclaration t ds) -> mapM_ (varDecl t) ds
-    (SReturn e)           -> do t <- infer e
+    (SEmpty)              -> return (SEmpty)
+    (SBlock b)            -> do b <- checkBlock rett b
+                                return (SBlock b) 
+    (SDeclaration t ds)   -> do ds <- mapM (varDecl t) ds
+                                return (SDeclaration t ds)
+    (SReturn e)           -> do e@(ETyped t _) <- infer e
                                 if t /= rett 
                                    then typeError stm [rett] t
-                                   else return ()
+                                   else return (SReturn e)
     (SReturnV)            -> if TVoid /= rett 
                                 then typeError stm [rett] TVoid
-                                else return ()
-    (SIf e tstm)          -> do t <- infer e
+                                else return (SReturnV)
+    (SIf e tstm)          -> do e@(ETyped t _) <- infer e
                                 if t == TBool 
-                                   then checkStatement rett tstm
+                                   then do tstm <- checkStatement rett tstm
+                                           return (SIf e tstm)
                                    else typeError e [TBool] t 
-    (SIfElse e tstm fstm) -> do t <- infer e
+    (SIfElse e tstm fstm) -> do e@(ETyped t _) <- infer e
                                 if t == TBool 
-                                   then do checkStatement rett tstm
-                                           checkStatement rett fstm
+                                   then do tstm <- checkStatement rett tstm
+                                           fstm <- checkStatement rett fstm
+                                           return (SIfElse e tstm fstm)
                                    else typeError e [TBool] t
-    (SWhile e stm)        -> do t <- infer e
+    (SWhile e stm)        -> do e@(ETyped t _) <- infer e
                                 if t == TBool 
-                                   then do checkStatement rett stm
+                                   then do stm <- checkStatement rett stm
+                                           return (SWhile e stm)
                                    else typeError e [TBool] t 
     (SInc id)             -> do t <- lookupVar id
                                 if t == TInt 
-                                   then return ()
+                                   then return (SInc id)
                                    else typeError id [TInt] t
-    (SDec id)             -> checkStatement rett (SInc id)
+    (SDec id)             -> do t <- lookupVar id
+                                if t == TInt 
+                                   then return (SDec id)
+                                   else typeError id [TInt] t
     (SAss id e)           -> do t1 <- lookupVar id
-                                t2 <- infer e
+                                e@(ETyped t2 _) <- infer e
                                 if t1 == t2
-                                   then return ()
+                                   then return (SAss id e)
                                    else typeError id [t1] t2
-    (SExpr e)             -> infer e >> return ()
+    (SExpr e)             -> do e@(ETyped _ _) <- infer e
+                                return (SExpr e)
     
 
-varDecl :: Type -> Declaration -> FailStateM ()
+varDecl :: Type -> Declaration -> FailStateM Declaration
 varDecl t decl = case decl of
-    (DNoInit id) -> addVar id t
-    (DInit id e) -> do t' <- infer e
+    (DNoInit id) -> do addVar id t
+                       return (DNoInit id)
+    (DInit id e) -> do e@(ETyped t' _) <- infer e
                        if t' /= t
                           then typeError decl [t] t'
-                          else addVar id t
+                          else do addVar id t
+                                  return (DInit id e)
 
                                     
-infer :: Expr -> FailStateM Type
+infer :: Expr -> FailStateM Expr
 infer e = case e of  
-    (EVar id)          -> lookupVar id
-    (EInt _)           -> return TInt    
-    (EDouble _)        -> return TDouble 
-    (EBool _)          -> return TBool
+    (EVar id)          -> do t <- lookupVar id
+                             return (ETyped t e)
+    (EInt _)           -> return (ETyped TInt  e)   
+    (EDouble _)        -> return (ETyped TDouble  e)
+    (EBool _)          -> return (ETyped TBool e)
     (ECall id args) | id == (Ident "printString") -> case args of
-                                                       [EString _] -> return TVoid
+                                                       [EString _] -> return (ETyped TVoid e)
                                                        x           -> fail $ "printString expected a string, got " ++ printTree x
                     | otherwise -> do f' <- lookupVar id
-                                      ts' <- mapM infer args
+                                      args' <- mapM infer args
+                                      let (args, ts') = unzip $ [(arg, t') | arg@(ETyped t' _) <- args']
                                       case f' of
                                         TFun t ts | ts /= ts' -> typeError id [TFun t ts] (TFun t ts')
-                                                  | otherwise -> return t
+                                                  | otherwise -> return (ETyped t (ECall id args))
                                         _ -> fail $ (printTree id ) ++ " isn't a function"
-    (ENeg e)           -> do t <- infer e
+    (ENeg e)           -> do e@(ETyped t _) <- infer e
                              if t `elem` [TInt, TDouble] 
-                                then return t
+                                then return (ETyped t (ENeg e))
                                 else typeError e [TInt, TDouble] t
-    (ENot e)           -> do t <- infer e
+    (ENot e)           -> do e@(ETyped t _) <- infer e
                              if t `elem` [TBool] 
-                                then return t
+                                then return (ETyped t (ENot e))
                                 else typeError e [TBool] t
-    (EMul e1 op e2)    -> do t1 <- infer e1
-                             t2 <- infer e2
+    (EMul e1 op e2)    -> do e1@(ETyped t1 _) <- infer e1
+                             e2@(ETyped t2 _) <- infer e2
                              if t1 `elem` [TInt, TDouble] 
                                 then if t2 == t1 
-                                     then return t1
+                                     then return (ETyped t1 (EMul e1 op e2))
                                      else typeError e2 [t1] t2
                                 else typeError e1 [TInt, TDouble] t1
-    (EAdd e1 op e2)    -> infer (EMul e1 Times e2)
-    (EEqu e1 op e2)    -> do t1 <- infer e1
-                             t2 <- infer e2
+    (EAdd e1 op e2)    -> do e1@(ETyped t1 _) <- infer e1
+                             e2@(ETyped t2 _) <- infer e2
+                             if t1 `elem` [TInt, TDouble] 
+                                then if t2 == t1 
+                                     then return (ETyped t1 (EAdd e1 op e2))
+                                     else typeError e2 [t1] t2
+                                else typeError e1 [TInt, TDouble] t1
+    (EEqu e1 op e2)    -> do e1@(ETyped t1 _) <- infer e1
+                             e2@(ETyped t2 _) <- infer e2
                              if t2 == t1 
-                               then return TBool
+                               then return (ETyped TBool (EEqu e1 op e2))
                                else typeError e2 [t1] t2
-    (ERel e1 op e2)    -> do t1 <- infer e1
-                             t2 <- infer e2
+    (ERel e1 op e2)    -> do e1@(ETyped t1 _) <- infer e1
+                             e2@(ETyped t2 _) <- infer e2
                              if t1 `elem` [TInt, TDouble] 
                                 then if t2 == t1 
-                                     then return TBool
+                                     then return (ETyped TBool (ERel e1 op e2))
                                      else typeError e2 [t1] t2
                                 else typeError e1 [TInt, TDouble] t1
-    (EAnd e1 e2)       -> do t1 <- infer e1
-                             t2 <- infer e2
+    (EAnd e1 e2)       -> do e1@(ETyped t1 _) <- infer e1
+                             e2@(ETyped t2 _) <- infer e2
                              if t1 == TBool 
                                 then if t2 == t1 
-                                     then return TBool
+                                     then return (ETyped TBool (EAnd e1 e2))
                                      else typeError e2 [t1] t2
                                 else typeError e1 [TBool] t1
-    (EOr e1 e2)        -> infer (EAnd e1 e2)
-    x                  -> fail $ "WTF is " ++ printTree x ++ "??"
+    (EOr e1 e2)        -> do e1@(ETyped t1 _) <- infer e1
+                             e2@(ETyped t2 _) <- infer e2
+                             if t1 == TBool 
+                                then if t2 == t1 
+                                     then return (ETyped TBool (EOr e1 e2))
+                                     else typeError e2 [t1] t2
+                                else typeError e1 [TBool] t1
+    (EString s)        -> fail $ "You can't have a string " ++ s ++ " here!"
                             
                             
 typeError :: (Monad m, Print a) => a -> [Type] -> Type -> m x
