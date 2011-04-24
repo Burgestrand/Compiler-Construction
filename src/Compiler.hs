@@ -130,7 +130,7 @@ instance Compileable Block where
 
 instance Compileable Statement where
   assemble SReturnV = jreturn TVoid
-  assemble (SReturn (ETyped tp e)) = do
+  assemble (SReturn e@(ETyped tp _)) = do
     assemble e
     jreturn tp
   
