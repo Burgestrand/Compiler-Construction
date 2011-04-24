@@ -110,27 +110,19 @@ instance Compileable Block where
   assemble (Block code) = concat `fmap` mapM assemble code
 
 instance Compileable Statement where
-  assemble (SReturnV)  = jreturn TVoid
-  assemble (SReturn e) = do -- TODO: ETyped tp e
-      if is_literal e
-         then push e
-         else assemble e
-      
-      jreturn (type_of e)
-    where
-      is_literal (EInt _)    = True
-      is_literal (EDouble _) = True
-      is_literal (EBool _)   = True
-      is_literal _           = False
-      
-      type_of (EInt _)    = TInt
-      type_of (EDouble _) = TDouble
-      type_of (EBool _)   = TBool
+  assemble stm = case stm of
+    (SReturnV) -> jreturn TVoid
+    (SReturn (ETyped t e)) -> do assemble e
+                                 jreturn t
   
-  assemble x = error (show x)
+    _ -> error (show x)
 
 instance Compileable Expr where
-  assemble x = error (show x)
+  assemble (ETyped t e) = case e of
+    (EInt _)     -> push e
+    (EDouble _)  -> push e
+    (EBool _)    -> push e
+  assemble x = error $ show x ++ " isn't wrapped in ETyped! I want wrapper!"
 
 ---
 
