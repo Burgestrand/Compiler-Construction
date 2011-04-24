@@ -154,13 +154,15 @@ infer e = case e of
     (EInt _)           -> return TInt    
     (EDouble _)        -> return TDouble 
     (EBool _)          -> return TBool
-    (ECall id args)    -> do f' <- lookupVar id
-                             ts' <- mapM infer args
-                             -- TODO Hantera strängar!!
-                             case f' of
-                                TFun t ts | ts /= ts' -> typeError id [TFun t ts] (TFun t ts')
-                                          | otherwise -> return t
-                                _ -> fail $ (printTree id ) ++ " isn't a function"
+    (ECall id args) | id == (Ident "printString") -> case args of
+                                                       [EString _] -> return TVoid
+                                                       x           -> fail $ "printString expected a string, got " ++ printTree x
+                    | otherwise -> do f' <- lookupVar id
+                                      ts' <- mapM infer args
+                                      case f' of
+                                        TFun t ts | ts /= ts' -> typeError id [TFun t ts] (TFun t ts')
+                                                  | otherwise -> return t
+                                        _ -> fail $ (printTree id ) ++ " isn't a function"
     (ENeg e)           -> do t <- infer e
                              if t `elem` [TInt, TDouble] 
                                 then return t
@@ -197,6 +199,7 @@ infer e = case e of
                                      else typeError e2 [t1] t2
                                 else typeError e1 [TBool] t1
     (EOr e1 e2)        -> infer (EAnd e1 e2)
+    x                  -> fail $ "WTF is " ++ printTree x ++ "??"
                             
                             
 typeError :: (Monad m, Print a) => a -> [Type] -> Type -> m x
