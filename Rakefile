@@ -18,8 +18,7 @@ task :grammarcompile do
 end
 
 desc "Test the code in a very budget way!"
-task :luffartest do
-  system 'javac -d ./bin src/Runtime.java'
+task :luffartest => :compile do
   result = system [
     'cd src',
     "runghc jlc.hs '#{SOURCE}' > '#{TARGET}'",
@@ -34,6 +33,8 @@ end
 
 desc "Compile the JLC compiler and put it in bin/"
 task :compile do
+  system 'javac -d ./bin src/Runtime.java'
+  
   system 'mkdir -p bin'
   
   Dir.chdir 'src' do
