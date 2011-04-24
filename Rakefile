@@ -34,6 +34,8 @@ end
 
 desc "Compile the JLC compiler and put it in bin/"
 task :compile do
+  system 'mkdir -p bin'
+  
   Dir.chdir 'src' do
     system 'ghc --make jlc.hs && mv ./jlc ../bin/'
   end
