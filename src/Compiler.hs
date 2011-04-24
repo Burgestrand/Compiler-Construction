@@ -20,6 +20,28 @@ data Compilation = Compilation {
   stack :: Stack
 }
 
+--
+-- Utility
+--
+
+-- | True if the given expression returns a double.
+is_double :: Expr -> Bool
+is_double (EDouble _) = True
+is_double _           = False
+
+-- | True if the given expression is a literal.
+is_literal :: Expr -> Bool
+is_literal (EInt _)    = True
+is_literal (EDouble _) = True
+is_literal (EBool _)   = True
+is_literal _           = False
+
+-- | Gives the type of a given expression.
+type_of :: Expr -> Type
+type_of (EInt _)    = TInt
+type_of (EDouble _) = TDouble
+type_of (EBool _)   = TBool
+
 ---
 
 class Compileable x where
@@ -68,9 +90,6 @@ push expr = do
     
     stackyay
     emit $ fn ++ value
-  where
-    is_double (EDouble _) = True
-    is_double _           = False
     
 
 -- | Return a value of a given type.
@@ -117,16 +136,6 @@ instance Compileable Statement where
          else assemble e
       
       jreturn (type_of e)
-    where
-      is_literal (EInt _)    = True
-      is_literal (EDouble _) = True
-      is_literal (EBool _)   = True
-      is_literal _           = False
-      
-      type_of (EInt _)    = TInt
-      type_of (EDouble _) = TDouble
-      type_of (EBool _)   = TBool
-  
   assemble x = error (show x)
 
 instance Compileable Expr where
