@@ -2,3 +2,4 @@ bin/
 *.j
 *.hi
 *.o
+tmp/
