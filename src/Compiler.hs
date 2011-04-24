@@ -129,18 +129,15 @@ instance Compileable Block where
   assemble (Block code) = concat `fmap` mapM assemble code
 
 instance Compileable Statement where
-  assemble stm = case stm of
-    (SReturnV) -> jreturn TVoid
-    (SReturn (ETyped t e)) -> do assemble e
-                                 jreturn t
+  assemble SReturnV = jreturn TVoid
+  assemble (SReturn (ETyped tp e)) = do
+    assemble e
+    jreturn tp
   
-    _ -> error (show x)
+  assemble e = error $ "Uncompilable statement: " ++ show e
 
 instance Compileable Expr where
-  assemble (ETyped t e) = case e of
-    (EInt _)     -> push e
-    (EDouble _)  -> push e
-    (EBool _)    -> push e
+  assemble (ETyped t e) | is_literal e = push e
   assemble x = error $ show x ++ " isn't wrapped in ETyped! I want wrapper!"
 
 ---
