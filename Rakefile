@@ -34,14 +34,23 @@ end
 
 desc "Compile the JLC compiler and put it in bin/"
 task :compile do
-  system '[[ -d tmp/ ]] && rm -r tmp/'
   Dir.chdir 'src' do
-    system 'ghc --make -outputdir /tmp jlc.hs && mv ./jlc ../bin/'
+    system 'ghc --make jlc.hs && mv ./jlc ../bin/'
   end
   
   Dir.chdir 'tester' do
     system 'make && mv ./Grade ../bin/'
   end
+end
+
+desc "Test the implementation using the built-in testing thingies"
+task :test => :compile do
+  system '[[ -d tmp/ ]] && rm -r tmp'
+  system [
+    'mkdir tmp',
+    'cp bin/jlc tmp/jlc',
+    './bin/Grade tester/ tmp/'
+  ].join(" && ")
 end
 
 task :default => [:compile]
