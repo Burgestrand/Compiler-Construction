@@ -30,8 +30,8 @@ typecheck (Program defs) = flip evalStateT emptyEnv $ do
   addVar (Ident "readInt") (TFun TInt [])
   addVar (Ident "readDouble") (TFun TDouble [])
   
-  defs <- mapM checkDefinition defs    -- Typechecks all functions
   mapM_ checkReturn defs        -- Check that all functions return
+  defs <- mapM checkDefinition defs    -- Typechecks all functions
   return (Program defs)
 
 -- | Iterate through all function definitions, modifying the environment
