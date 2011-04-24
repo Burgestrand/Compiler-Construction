@@ -1,6 +1,7 @@
 SOURCE = File.expand_path('code.jl')
 TARGET = SOURCE.gsub(/\.jl\z/, '.j')
 
+desc "Recompile the grammar and make the proper adjustments"
 task :grammarcompile do
   Dir.chdir 'src/javalette' do
     system <<-BASH
@@ -16,7 +17,8 @@ task :grammarcompile do
   end
 end
 
-task :compile do
+desc "Test the code in a very budget way!"
+task :luffartest do
   system 'javac -d ./bin src/Runtime.java'
   result = system [
     'cd src',
@@ -28,6 +30,27 @@ task :compile do
   
   puts
   puts "Result: #{result}"
+end
+
+desc "Compile the JLC compiler and put it in bin/"
+task :compile do
+  Dir.chdir 'src' do
+    system 'ghc --make jlc.hs && mv ./jlc ../bin/'
+  end
+  
+  Dir.chdir 'tester' do
+    system 'make && mv ./Grade ../bin/'
+  end
+end
+
+desc "Test the implementation using the built-in testing thingies"
+task :test => :compile do
+  system '[[ -d tmp/ ]] && rm -r tmp'
+  system [
+    'mkdir tmp',
+    'cp bin/jlc tmp/jlc',
+    './bin/Grade tester/ tmp/'
+  ].join(" && ")
 end
 
 task :default => [:compile]

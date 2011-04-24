@@ -21,6 +21,15 @@ type FailStateM = StateT Env Err
 typecheck :: Program -> Err Program
 typecheck (Program defs) = flip evalStateT emptyEnv $ do
   collectDefinitions defs       -- Fills enviroment with function signatures
+  
+  -- Add built-in functions! :D
+  addVar (Ident "printInt") (TFun TVoid [TInt])
+  addVar (Ident "printDouble") (TFun TVoid [TDouble])
+  addVar (Ident "printString") (TFun TVoid [TVoid])
+  
+  addVar (Ident "readInt") (TFun TInt [])
+  addVar (Ident "readDouble") (TFun TDouble [])
+  
   defs <- mapM checkDefinition defs    -- Typechecks all functions
   mapM_ checkReturn defs        -- Check that all functions return
   return (Program defs)

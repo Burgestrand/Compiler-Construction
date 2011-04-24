@@ -9,10 +9,15 @@ import Data.Char (toUpper)
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
 import System.FilePath (dropExtensions, takeBaseName)
+import System.IO
 
 -- utility
 titleize :: String -> String
 titleize (x:xs) = (toUpper x):xs
+
+-- | For some reason, the supplied Grade requires output on stderr!?
+info :: String -> IO ()
+info msg = hPutStr stderr msg
 
 -- aliases
 parselex = pProgram . myLexer
@@ -26,11 +31,11 @@ main = do
       source  <- readFile file
       program <- return $ do
         program <- parselex source
-        program <- typecheck program
-        return $ compile name program
+        typecheck program
+        -- return $ compile name program
       
       case program of
-        Ok  source  -> putStr source
-        Bad message -> error message
+        Ok  source  -> info $ "OK: " ++ show source
+        Bad message -> info $ "ERROR: " ++ message
       
     _      -> error "Usage: jlc path/to/javalette/source.jl"

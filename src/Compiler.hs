@@ -57,6 +57,7 @@ push :: Expr -> Jasmin Code
 push expr = do
     let value = case expr of
                 (EInt x)    -> show x
+                (EDouble x) -> show x
                 (EString x) -> show x
                 (EBool LTrue)  -> "1"
                 (EBool LFalse) -> "0"
@@ -93,7 +94,10 @@ instance Compileable Definition where
                      TVoid   -> "V"
     
     directive "method" (signature ++ "(" ++ args ++ ")" ++ returntype)
-    assemble code
+    pass $ do
+      assemble code
+      (_, s) <- gets stack
+      return ((), ((".limit stack " ++ show s):))
     directive "end" "method"
 
 instance Compileable Arg where
