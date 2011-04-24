@@ -1,6 +1,7 @@
 SOURCE = File.expand_path('code.jl')
 TARGET = SOURCE.gsub(/\.jl\z/, '.j')
 
+desc "Recompile the grammar and make the proper adjustments"
 task :grammarcompile do
   Dir.chdir 'src/javalette' do
     system <<-BASH
@@ -16,7 +17,8 @@ task :grammarcompile do
   end
 end
 
-task :compile do
+desc "Test the code in a very budget way!"
+task :luffartest do
   system 'javac -d ./bin src/Runtime.java'
   result = system [
     'cd src',
