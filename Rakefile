@@ -32,4 +32,16 @@ task :luffartest do
   puts "Result: #{result}"
 end
 
+desc "Compile the JLC compiler and put it in bin/"
+task :compile do
+  system '[[ -d tmp/ ]] && rm -r tmp/'
+  Dir.chdir 'src' do
+    system 'ghc --make -outputdir /tmp jlc.hs && mv ./jlc ../bin/'
+  end
+  
+  Dir.chdir 'tester' do
+    system 'make && mv ./Grade ../bin/'
+  end
+end
+
 task :default => [:compile]
