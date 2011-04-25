@@ -16,6 +16,9 @@ type Lines = [Code]
 type Code  = String
 type Stack = (Integer, Integer) -- | (Current, Maximum)
 data Compilation = Compilation {
+  -- | Class name
+  name :: String,
+  
   -- | (Current, Maximum)
   stack :: Stack
 }
@@ -142,9 +145,9 @@ instance Compileable Expr where
 
 ---
 
-compiler :: (Compileable x) => x -> Code
-compiler x = intercalate "\n" $ execWriter $ runStateT (assemble x) state
-  where state = Compilation (0, 0) 
+compiler :: (Compileable x) => String -> x -> Code
+compiler name x = intercalate "\n" $ execWriter $ runStateT (assemble x) state
+  where state = Compilation name (0, 0) 
 
 ---
 
@@ -157,4 +160,4 @@ compile name (Program fs) = header ++ functions
                           "  invokestatic java/lang/System/exit(I)V",
                           "  return",
                           ".end method"] ++ "\n"
-        functions = intercalate "\n\n" (map compiler fs)
+        functions = intercalate "\n\n" (map (compiler name) fs)
