@@ -229,6 +229,11 @@ instance Compileable Block where
   assemble (Block code) = concat `fmap` mapM assemble code
 
 instance Compileable Statement where
+  assemble (SIf (ETyped _ (EBool LTrue))  s) = assemble s
+  assemble (SIf (ETyped _ (EBool LFalse)) _) = emit ""
+  
+  assemble (SBlock e) = assemble e
+      
   assemble (SReturnV) = jreturn TVoid
   assemble (SReturn e@(ETyped tp _)) = do
     assemble e
