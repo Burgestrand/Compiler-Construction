@@ -52,6 +52,7 @@ task :test => :compile do
   system [
     'mkdir tmp',
     'cp bin/jlc tmp/jlc',
+    'cp bin/Runtime.class tmp/',
     './bin/Grade -b JVM tester/ tmp/'
   ].join(" && ")
 end
