@@ -37,6 +37,7 @@ is_literal :: Expr -> Bool
 is_literal (EInt _)    = True
 is_literal (EDouble _) = True
 is_literal (EBool _)   = True
+is_literal (EString _) = True
 is_literal _           = False
 
 -- | Gives the type of a given expression.
