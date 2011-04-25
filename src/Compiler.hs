@@ -244,7 +244,16 @@ instance Compileable Expr where
   assemble (ETyped tp (ENeg e)) = do
     assemble e
     neg tp
-  assemble (ETyped tp (ENot e)) = undefined --TODO
+  assemble (ETyped TBool (ENot e)) = do
+    lab_t <- getlabel
+    lab_f <- getlabel
+    assemble e
+    emit $ "ifne " ++ lab_t
+    push (EBool LFalse)
+    goto lab_f
+    putlabel lab_t
+    push (EBool LTrue)
+    putlabel lab_f    
   assemble (ETyped tp (EMul e1 op e2)) = do
     assemble e1
     assemble e2
@@ -264,8 +273,53 @@ instance Compileable Expr where
       TDouble -> "d") ++ (case op of
       Plus  -> "add"
       Minus -> "sub")
-  
-  
+  assemble (ETyped TBool (EEqu e1 op e2)) = do
+    lab_t <- getlabel
+    lab_f <- getlabel
+    assemble e1
+    assemble e2
+    let (ETyped tp _) = e1
+    emit $ (case tp of
+      TBool   -> "i"
+      TInt    -> "i"
+      TDouble -> "d") ++ "sub"
+    emit $ (case op of
+      EQU -> "ifeq " 
+      NE  -> "ifne ")++ lab_t
+    push (EBool LFalse)
+    goto lab_f
+    putlabel lab_t
+    push (EBool LTrue)
+    putlabel lab_f
+  assemble (ETyped TBool (ERel e1 op e2)) = do
+    lab_t <- getlabel
+    lab_f <- getlabel
+    assemble e1
+    assemble e2
+    let (ETyped tp _) = e1
+    emit $ (case tp of
+      TInt    -> "i"
+      TDouble -> "d") ++ "sub"
+    emit $ (case op of
+      LTH -> "iflt "
+      LE  -> "ifle "
+      GTH -> "ifgt "
+      GE  -> "ifge ") ++ lab_t
+    push (EBool LFalse)
+    goto lab_f
+    putlabel lab_t
+    push (EBool LTrue)
+    putlabel lab_f
+  assemble (ETyped TBool (EAnd e1 e2)) = do
+    assemble e1
+    assemble e2
+    stackdec
+    emit "iand"
+  assemble (ETyped TBool (EOr e1 e2)) = do
+    assemble e1
+    assemble e2
+    stackdec
+    emit "ior"
   
   
   assemble e = error $ "Non-compilable expression: " ++ show e
