@@ -107,6 +107,13 @@ load tp i = do
   let func = if tp == TDouble then "dload" else "iload"
   emit $ func ++ " " ++ (show i)
 
+-- | Store the top of the stack in local variable N
+store :: Type -> Int -> Jasmin Code
+store tp i = do
+  stackdec
+  let func = if tp == TDouble then "dstore" else "istore"
+  emit $ func ++ " " ++ (show i)
+
 -- > High Level
 
 -- | Emit a directive with the specified name and parameters.
