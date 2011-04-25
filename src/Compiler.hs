@@ -111,13 +111,21 @@ push expr = do
 -- | Call a static function: name, args, returns
 call :: String -> [Expr] -> Type -> Jasmin Code
 call func targs returns = do
-  mapM (const stackdec) targs               -- decrease stack once for each arg
-  unless (returns == TVoid) (void stackinc) -- increase stack once for return type
+    mapM (const stackdec) targs               -- decrease stack once for each arg
+    unless (returns == TVoid) (void stackinc) -- increase stack once for return type
   
-  klass <- gets name
-  let args = intercalate ";" (map type_of targs)
-  let name = klass ++ "/" ++ func
-  emit $ "invokestatic " ++ name ++ "(" ++ args ++ ")" ++ type2str returns
+    klass <- if builtin func then return "Runtime" else gets name
+    let args = intercalate "," (map type_of targs)
+    let name = klass ++ "/" ++ func
+    emit $ "invokestatic " ++ name ++ "(" ++ args ++ ")" ++ type2str returns
+  where
+    -- Unfortunately, we need to hard-code the built in functions at the mo'
+    builtin "printString" = True
+    builtin "printInt"    = True
+    builtin "printDouble" = True
+    builtin "readInt"     = True
+    builtin "readdouble"  = True
+    builtin _             = True
 
 -- | Return a value of a given type.
 jreturn :: Type -> Jasmin Code
