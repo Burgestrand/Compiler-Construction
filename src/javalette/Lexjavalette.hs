@@ -1,10 +1,9 @@
 {-# OPTIONS -cpp #-}
 {-# LINE 3 "Lexjavalette.x" #-}
 
-{-# OPTIONS -fno-warn-incomplete-patterns #-}
 module Lexjavalette where
 
-
+import ErrM
 
 
 #if __GLASGOW_HASKELL__ >= 603
@@ -33,7 +32,7 @@ alex_deflt :: Array Int Int
 alex_deflt = listArray (0,33) [22,2,2,4,4,-1,11,-1,11,11,11,11,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,26,26,-1,-1,-1,-1,-1,-1,-1]
 
 alex_accept = listArray (0::Int,33) [[],[(AlexAccSkip)],[(AlexAccSkip)],[(AlexAccSkip)],[(AlexAccSkip)],[(AlexAcc (alex_action_4))],[(AlexAccSkip)],[(AlexAccSkip)],[],[],[],[],[(AlexAccSkip)],[(AlexAcc (alex_action_4))],[(AlexAcc (alex_action_4))],[(AlexAcc (alex_action_4))],[(AlexAcc (alex_action_4))],[(AlexAcc (alex_action_4))],[(AlexAcc (alex_action_4))],[(AlexAcc (alex_action_4))],[],[],[(AlexAcc (alex_action_5))],[(AlexAcc (alex_action_5))],[(AlexAcc (alex_action_6))],[],[],[],[(AlexAcc (alex_action_7))],[(AlexAcc (alex_action_8))],[(AlexAcc (alex_action_8))],[],[],[]]
-{-# LINE 36 "Lexjavalette.x" #-}
+{-# LINE 35 "Lexjavalette.x" #-}
 
 
 tok f p s = f p s
@@ -42,12 +41,12 @@ share :: String -> String
 share = id
 
 data Tok =
-   TS !String !Int    -- reserved words and symbols
- | TL !String         -- string literals
- | TI !String         -- integer literals
- | TV !String         -- identifiers
- | TD !String         -- double precision float literals
- | TC !String         -- character literals
+   TS !String     -- reserved words
+ | TL !String     -- string literals
+ | TI !String     -- integer literals
+ | TV !String     -- identifiers
+ | TD !String     -- double precision float literals
+ | TC !String     -- character literals
 
  deriving (Eq,Show,Ord)
 
@@ -64,13 +63,13 @@ posLineCol (Pn _ l c) = (l,c)
 mkPosToken t@(PT p _) = (posLineCol p, prToken t)
 
 prToken t = case t of
-  PT _ (TS s _) -> s
-  PT _ (TL s)   -> s
-  PT _ (TI s)   -> s
-  PT _ (TV s)   -> s
-  PT _ (TD s)   -> s
-  PT _ (TC s)   -> s
+  PT _ (TS s) -> s
+  PT _ (TI s) -> s
+  PT _ (TV s) -> s
+  PT _ (TD s) -> s
+  PT _ (TC s) -> s
 
+  _ -> show t
 
 data BTree = N | B String Tok BTree BTree deriving (Show)
 
@@ -82,12 +81,11 @@ eitherResIdent tv s = treeFind resWords
                               | s > a  = treeFind right
                               | s == a = t
 
-resWords = b "=" 17 (b "++" 9 (b "(" 5 (b "%" 3 (b "!=" 2 (b "!" 1 N N) N) (b "&&" 4 N N)) (b "*" 7 (b ")" 6 N N) (b "+" 8 N N))) (b "/" 13 (b "-" 11 (b "," 10 N N) (b "--" 12 N N)) (b "<" 15 (b ";" 14 N N) (b "<=" 16 N N)))) (b "int" 26 (b "double" 22 (b ">=" 20 (b ">" 19 (b "==" 18 N N) N) (b "boolean" 21 N N)) (b "false" 24 (b "else" 23 N N) (b "if" 25 N N))) (b "while" 30 (b "true" 28 (b "return" 27 N N) (b "void" 29 N N)) (b "||" 32 (b "{" 31 N N) (b "}" 33 N N))))
-   where b s n = let bs = id s
-                  in B bs (TS bs n)
+resWords = b "int" (b "else" (b "double" (b "boolean" N N) N) (b "if" (b "false" N N) N)) (b "void" (b "true" (b "return" N N) N) (b "while" N N))
+   where b s = B s (TS s)
 
 unescapeInitTail :: String -> String
-unescapeInitTail = id . unesc . tail . id where
+unescapeInitTail = unesc . tail where
   unesc s = case s of
     '\\':c:cs | elem c ['\"', '\\', '\''] -> c : unesc cs
     '\\':'n':cs  -> '\n' : unesc cs
@@ -112,33 +110,31 @@ alexMove (Pn a l c) '\t' = Pn (a+1)  l     (((c+7) `div` 8)*8+1)
 alexMove (Pn a l c) '\n' = Pn (a+1) (l+1)   1
 alexMove (Pn a l c) _    = Pn (a+1)  l     (c+1)
 
-type AlexInput = (Posn,     -- current position,
-                  Char,     -- previous char
-                  String)   -- current input string
+type AlexInput = (Posn, -- current position,
+               Char, -- previous char
+               String) -- current input string
 
 tokens :: String -> [Token]
 tokens str = go (alexStartPos, '\n', str)
     where
-      go :: AlexInput -> [Token]
+      go :: (Posn, Char, String) -> [Token]
       go inp@(pos, _, str) =
-               case alexScan inp 0 of
-                AlexEOF                -> []
-                AlexError (pos, _, _)  -> [Err pos]
-                AlexSkip  inp' len     -> go inp'
-                AlexToken inp' len act -> act pos (take len str) : (go inp')
+       case alexScan inp 0 of
+         AlexEOF                -> []
+         AlexError (pos, _, _)  -> fail $ show pos ++ ": lexical error"
+         AlexSkip  inp' len     -> go inp'
+         AlexToken inp' len act -> act pos (take len str) : (go inp')
 
 alexGetChar :: AlexInput -> Maybe (Char,AlexInput)
-alexGetChar (p, _, s) =
-  case  s of
-    []  -> Nothing
-    (c:s) ->
-             let p' = alexMove p c
-              in p' `seq` Just (c, (p', c, s))
+alexGetChar (p, c, [])    = Nothing
+alexGetChar (p, _, (c:s)) =
+    let p' = alexMove p c
+     in p' `seq` Just (c, (p', c, s))
 
 alexInputPrevChar :: AlexInput -> Char
 alexInputPrevChar (p, c, s) = c
 
-alex_action_4 =  tok (\p s -> PT p (eitherResIdent (TV . share) s)) 
+alex_action_4 =  tok (\p s -> PT p (TS $ share s)) 
 alex_action_5 =  tok (\p s -> PT p (eitherResIdent (TV . share) s)) 
 alex_action_6 =  tok (\p s -> PT p (TL $ share $ unescapeInitTail s)) 
 alex_action_7 =  tok (\p s -> PT p (TI $ share s))    

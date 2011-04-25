@@ -25,9 +25,9 @@ SReturnV.     Statement ::= "return" ";";
 SIf.          Statement ::= "if" "(" Expr ")" Statement;
 SIfElse.      Statement ::= "if" "(" Expr ")" Statement "else" Statement;
 SWhile.       Statement ::= "while" "(" Expr ")" Statement;
-SInc.         Statement ::= Ident "++";
-SDec.         Statement ::= Ident "--";
-SAss.         Statement ::= Ident "=" Expr;
+SInc.         Statement ::= Ident "++" ";";
+SDec.         Statement ::= Ident "--" ";";
+SAss.         Statement ::= Ident "=" Expr ";";
 SExpr.        Statement ::= Expr ";";
 
 DNoInit.           Declaration ::= Ident; 
