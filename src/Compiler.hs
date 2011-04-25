@@ -63,6 +63,11 @@ type2str TDouble = "D"
 type2str TBool   = "I"
 type2str TVoid   = "V"
 
+-- | Convert an expression to a Type
+expr2type :: Expr -> Type
+expr2type (EDouble _) = TDouble
+expr2type _           = TInt
+
 -- | Given an expression, always return unit.
 void :: (Monad m) => m a -> m ()
 void m = m >> return ()
