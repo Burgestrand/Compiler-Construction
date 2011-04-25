@@ -76,12 +76,12 @@ stackmod fn = do
   return stack
 
 -- | Increase the stack size, returning the new Stack.
-stackyay :: Jasmin Stack
-stackyay = stackmod (\(x, y) -> (x + 1, max (x + 1) y))
+stackinc :: Jasmin Stack
+stackinc = stackmod (\(x, y) -> (x + 1, max (x + 1) y))
 
 -- | Decrease the stack size, returnin gthe new Stack.
-stackboo :: Jasmin Stack
-stackboo = stackmod (\(x, y) -> (x - 1, y))
+stackdec :: Jasmin Stack
+stackdec = stackmod (\(x, y) -> (x - 1, y))
 
 -- > High Level
 
@@ -100,17 +100,17 @@ push expr = do
                 (EBool LFalse) -> "0"
     
     fn <- if is_double expr
-          then stackyay >> return "ldc2_w "
+          then stackinc >> return "ldc2_w "
           else return "ldc "
     
-    stackyay
+    stackinc
     emit $ fn ++ value
 
 -- | Call a static function: name, args, returns
 call :: String -> [Type] -> Type -> Jasmin Code
 call func targs returns = do
-  mapM (const stackboo) targs               -- decrease stack once for each arg
-  unless (returns == TVoid) (void stackyay) -- increase stack once for return type
+  mapM (const stackdec) targs               -- decrease stack once for each arg
+  unless (returns == TVoid) (void stackinc) -- increase stack once for return type
   
   klass <- gets name
   let args = intercalate ";" (map typestring targs)
