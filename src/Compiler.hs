@@ -100,6 +100,13 @@ getlabel = do
   modify (\state -> state { label = label })
   return ("lab" ++ show label)
 
+-- | Load a local variable of index N of type Type.
+load :: Type -> Int -> Jasmin Code
+load tp i = do
+  stackinc
+  let func = if tp == TDouble then "dload" else "iload"
+  emit $ func ++ " " ++ (show i)
+
 -- > High Level
 
 -- | Emit a directive with the specified name and parameters.
