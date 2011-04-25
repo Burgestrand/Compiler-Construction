@@ -125,7 +125,7 @@ call func targs returns = do
     builtin "printDouble" = True
     builtin "readInt"     = True
     builtin "readdouble"  = True
-    builtin _             = True
+    builtin _             = False
 
 -- | Return a value of a given type.
 jreturn :: Type -> Jasmin Code
