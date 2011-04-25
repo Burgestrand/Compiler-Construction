@@ -169,6 +169,15 @@ neg :: Type -> Jasmin Code
 neg TDouble = emit "dneg"
 neg TInt    = emit "ineg"
 
+-- | Fetch a local variable by putting it on the stack.
+fetch :: Ident -> Jasmin (Type, Int)
+fetch name = do
+    (i, tp) <- find name `fmap` gets locals
+    load tp i
+    return (tp, i)
+  where
+    find = flip (Map.!)
+
 ---
 
 instance Compileable Definition where
