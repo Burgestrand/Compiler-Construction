@@ -48,13 +48,17 @@ end
 
 desc "Test the implementation using the built-in testing thingies"
 task :test => :compile do
-  system '[[ -d tmp/ ]] && rm -r tmp'
-  system [
-    'mkdir tmp',
-    'cp bin/jlc tmp/jlc',
-    'cp bin/Runtime.class tmp/',
-    './bin/Grade -b JVM tester/ tmp/'
-  ].join(" && ")
+  system '[[ -d "tmp/" ]] && rm -r tmp'
+  system 'mkdir tmp'
+  Dir.chdir 'tmp' do
+    system [
+      'cp ../bin/jlc .',
+      'cp -r ../lib .',
+      'cp ../bin/Runtime.class ./lib',
+      'cp ../bin/Grade .',
+      './Grade -b JVM ../tester/ .'
+    ].join(" && ")
+  end
 end
 
 task :default => [:compile]
