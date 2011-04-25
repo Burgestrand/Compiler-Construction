@@ -243,7 +243,10 @@ instance Compileable Statement where
     emit "nop"
   
   assemble (SBlock e) = assemble e
-      
+  assemble (SAss name e@(ETyped tp _)) = do
+    assemble e
+    storeVar name tp
+    
   assemble (SReturnV) = jreturn TVoid
   assemble (SReturn e@(ETyped tp _)) = do
     assemble e
