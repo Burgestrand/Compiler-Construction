@@ -152,6 +152,11 @@ putlabel l = emit l ++ ":"
 goto :: Code -> Jasmin Code
 goto l = emit "goto" ++ l
 
+-- | Negate the previous expression (double or integer)
+neg :: Type -> Jasmin Code
+neg TDouble = emit "dneg"
+neg TInt    = emit "ineg"
+
 ---
 
 instance Compileable Definition where
@@ -161,7 +166,9 @@ instance Compileable Definition where
     
     directive "method" (signature ++ "(" ++ args ++ ")" ++ type2str returns)
     pass $ do
-      assemble code
+      case code of
+        (Block []) -> jreturn TVoid
+        _          -> assemble code
       (_, s) <- gets stack
       return ((), ((".limit stack " ++ show s):))
     directive "end" "method"
@@ -188,12 +195,9 @@ instance Compileable Expr where
   assemble (ETyped returns (ECall (Ident func) args)) = do
     mapM_ assemble args
     call func args returns
-  assemble (ETyped TInt (ENeg e)) = do
+  assemble (ETyped tp (ENeg e)) = do
     assemble e
-    emit "ineg"
-  assemble (ETyped TDouble (ENeg e)) = do
-    assemble e
-    emit "dneg"
+    neg tp
   
   
   assemble e = error $ "Non-compilable expression: " ++ show e
