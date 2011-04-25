@@ -25,7 +25,10 @@ data Compilation = Compilation {
   stack :: Stack,
   
   -- | Maps a variable name to its’ index and its’ type
-  locals :: Map Ident (Int, Type)
+  locals :: Map Ident (Int, Type),
+  
+  -- | Label counter
+  label :: Integer
 }
 
 --
@@ -90,6 +93,13 @@ stackinc = stackmod (\(x, y) -> (x + 1, max (x + 1) y))
 stackdec :: Jasmin Stack
 stackdec = stackmod (\(x, y) -> (x - 1, y))
 
+-- | Generating a new unique label, returning that label
+getlabel :: Jasmin Code
+getlabel = do
+  label <- ((1+) . label) `fmap` get
+  modify (\state -> state { label = label })
+  return "lab" ++ show label
+
 -- > High Level
 
 -- | Emit a directive with the specified name and parameters.
@@ -139,6 +149,14 @@ jreturn TBool   = emit "ireturn"
 jreturn TInt    = emit "ireturn"
 jreturn TVoid   = emit "return"
 
+-- | Place a label here
+putlabel :: Code -> Jasmin Code
+putlabel l = emit l ++ ":"
+ 
+-- | Goto another label
+goto :: Code -> Jasmin Code
+goto l = emit "goto" ++ l
+
 -- | Negate the previous expression (double or integer)
 neg :: Type -> Jasmin Code
 neg TDouble = emit "dneg"
@@ -185,6 +203,7 @@ instance Compileable Expr where
   assemble (ETyped tp (ENeg e)) = do
     assemble e
     neg tp
+  
   
   assemble e = error $ "Non-compilable expression: " ++ show e
 
