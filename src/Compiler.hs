@@ -157,8 +157,13 @@ instance Compileable Statement where
   assemble e = error $ "Non-compilable statement: " ++ show e
 
 instance Compileable Expr where
-  assemble (ETyped t e) | is_literal e = push e
-  assemble x = error $ show x ++ " isn't wrapped in ETyped! I want wrapper!"
+  assemble e | is_literal e = push e
+  assemble (ETyped t e) | is_literal e = assemble e
+  assemble (ETyped returns (ECall (Ident func) args)) = do
+    mapM_ assemble args
+    call func (map (\(ETyped t _) -> t) args) returns
+  
+  assemble e = error $ "Non-compilable expression: " ++ show e
 
 ---
 
