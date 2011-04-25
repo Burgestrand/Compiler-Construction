@@ -1,9 +1,25 @@
-Compiling
----------
-To compile you need [rake](http://rake.rubyforge.org/). Do apt-get install rake.
+> An explanation of how the compiler is used (what options, what output, etc)
 
-Run command rake test to compile program and start tests. If a problem due to an exsting tmp-folder, remove it and try again. 
+The compiler has no options, apart from the file to be compiled. Invoking
+“jlc” without any arguments (or invalid arguments) will show usage help:
 
-Grammar notes
--------------
+  Usage: jlc path/to/javalette/source.jl
+
+When invoked, it will compile the given file and place output in the same
+directory as the original file is located in in the form of a .class file.
+
+– A speciﬁcation of the Javalette language (if produced by BNF converter, you
+may just refer to your BNFC source ﬁle).
+
+See `src/javalette/javalette.cf` for grammar file.
+
+– A list of shift/reduce conﬁcts in your parser, if you have such conﬂicts,
+and an analysis of them.
+
 The grammar has one shift-reduce problem; the dangling else problem.
+
+– If applicable, a list of features not implemented and the reason why.
+
+This submission is partial, and will be rejected automatically as it does
+not pass the grading tests. The reason is that we time optimists and not
+very good at managing our time (yet).
