@@ -104,7 +104,17 @@ push expr = do
     
     stackyay
     emit $ fn ++ value
-    
+
+-- | Call a static function: name, args, returns
+call :: String -> [Type] -> Type -> Jasmin Code
+call func targs returns = do
+  mapM (const stackboo) targs               -- decrease stack once for each arg
+  unless (returns == TVoid) (void stackyay) -- increase stack once for return type
+  
+  klass <- gets name
+  let args = intercalate ";" (map typestring targs)
+  let name = klass ++ "/" ++ func
+  emit $ "invokestatic " ++ name ++ "(" ++ args ++ ")" ++ typestring returns
 
 -- | Return a value of a given type.
 -- TODO: Modify stack?
