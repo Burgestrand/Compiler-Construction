@@ -9,6 +9,7 @@ import Control.Monad.Writer
 import Data.List
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.Maybe
 
 ---
 
@@ -178,6 +179,28 @@ fetchVar name = do
     find = flip (Map.!)
     load TDouble = "dload"
     load _       = "iload"
+
+-- | Store a literal as a local variable; returns its’ index.
+storeVar :: Ident -> Expr -> Jasmin Int
+storeVar name e | is_literal e = do
+    let tp = expr2type e
+    localVars <- gets locals
+    
+    -- if a new variable then store its index!
+    when (isJust $ Map.lookup name localVars) $ do
+      let locals' = Map.insert name (Map.size localVars, tp) localVars
+      modify (\state -> state { locals = locals' })
+    
+    -- find the variables’ index
+    (i, _) <- find name `fmap` gets locals
+    
+    stackdec
+    emit $ store tp ++ " " ++ (show i)
+    return i
+  where
+    find = flip (Map.!)
+    store TDouble = "dstore"
+    store _       = "istore"
 
 ---
 
