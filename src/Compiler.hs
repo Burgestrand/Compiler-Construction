@@ -190,7 +190,7 @@ storeVar name tp = do
     
     -- if a new variable then store its index!
     when (isNothing $ Map.lookup name localVars) $ do
-      let locals' = Map.insert name (Map.size localVars, tp) localVars
+      let locals' = Map.insert name (Map.size localVars + 1, tp) localVars
       modify (\state -> state { locals = locals' })
     
     -- find the variables’ index
