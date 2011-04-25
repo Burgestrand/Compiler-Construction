@@ -26,7 +26,7 @@ data Compilation = Compilation {
   stack :: Stack,
   
   -- | Maps a variable name to its’ index and its’ type
-  locals :: Map Ident (Int, Type),
+  locals :: (Int, Map Ident (Int, Type)),
   
   -- | Label counter
   label :: Integer
@@ -175,33 +175,35 @@ neg TInt    = emit "ineg"
 -- | Fetch a local variable by putting it on the stack.
 fetchVar :: Ident -> Jasmin Code
 fetchVar name = do
-    (i, tp) <- find name `fmap` gets locals
+    (i, tp) <- (find name . snd) `fmap` gets locals
     stackinc
-    emit $ load tp ++ " " ++ (show i)
+    load tp (show i)
   where
     find = flip (Map.!)
-    load TDouble = "dload"
-    load _       = "iload"
+    load TDouble i = stackinc >> emit ("dload " ++ i)
+    load _       i = emit ("iload " ++ i)
 
 -- | Store a literal as a local variable; returns its’ index.
 storeVar :: Ident -> Type -> Jasmin Code
 storeVar name tp = do
-    localVars <- gets locals
+    (size, localVars) <- gets locals
     
     -- if a new variable then store its index!
     when (isNothing $ Map.lookup name localVars) $ do
-      let locals' = Map.insert name (Map.size localVars + 1, tp) localVars
-      modify (\state -> state { locals = locals' })
+      let locals' = Map.insert name (size, tp) localVars
+      modify (\state -> state { locals = (size + sizeof tp, locals') })
     
     -- find the variables’ index
-    (i, _) <- find name `fmap` gets locals
+    (i, _) <- (find name . snd) `fmap` gets locals
     
     stackdec
-    emit $ store tp ++ " " ++ (show i)
+    store tp (show i)
   where
     find = flip (Map.!)
-    store TDouble = "dstore"
-    store _       = "istore"
+    store TDouble i = stackdec >> emit ("dstore " ++ i)
+    store _       i = emit ("istore " ++ i)
+    sizeof TDouble  = 2
+    sizeof _        = 1
 
 ---
 
@@ -216,7 +218,7 @@ instance Compileable Definition where
           (Block []) -> jreturn TVoid
           _          -> assemble code
         (_, stack) <- gets stack
-        locals <- Map.size `fmap` gets locals
+        locals <- fst `fmap` gets locals
         return ((), (\code -> limits stack locals:indent code))
       directive "end" "method"
     where
@@ -346,7 +348,7 @@ instance Compileable Expr where
 
 compiler :: (Compileable x) => String -> x -> Code
 compiler name x = intercalate "\n" $ execWriter $ runStateT (assemble x) state
-  where state = Compilation name (0, 0) Map.empty 0
+  where state = Compilation name (0, 0) (0, Map.empty) 0
 
 ---
 
