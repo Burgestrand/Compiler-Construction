@@ -146,7 +146,7 @@ instance Compileable Block where
   assemble (Block code) = concat `fmap` mapM assemble code
 
 instance Compileable Statement where
-  assemble SReturnV = jreturn TVoid
+  assemble (SReturnV) = jreturn TVoid
   assemble (SReturn e@(ETyped tp _)) = do
     assemble e
     jreturn tp
