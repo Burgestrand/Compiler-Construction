@@ -143,7 +143,9 @@ instance Compileable Definition where
     
     directive "method" (signature ++ "(" ++ args ++ ")" ++ type2str returns)
     pass $ do
-      assemble code
+      case code of
+        (Block []) -> jreturn TVoid
+        _          -> assemble code
       (_, s) <- gets stack
       return ((), ((".limit stack " ++ show s):))
     directive "end" "method"
