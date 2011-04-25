@@ -20,7 +20,10 @@ data Compilation = Compilation {
   name :: String,
   
   -- | (Current, Maximum)
-  stack :: Stack
+  stack :: Stack,
+  
+  -- | Label counter
+  label :: Integer
 }
 
 --
@@ -85,6 +88,13 @@ stackinc = stackmod (\(x, y) -> (x + 1, max (x + 1) y))
 stackdec :: Jasmin Stack
 stackdec = stackmod (\(x, y) -> (x - 1, y))
 
+-- | Generating a new unique label, returning that label
+getlabel :: Jasmin Code
+getlabel = do
+  label <- ((1+) . label) `fmap` get
+  modify (\state -> state { label = label })
+  return "lab" ++ show label
+
 -- > High Level
 
 -- | Emit a directive with the specified name and parameters.
@@ -134,6 +144,14 @@ jreturn TBool   = emit "ireturn"
 jreturn TInt    = emit "ireturn"
 jreturn TVoid   = emit "return"
 
+-- | Place a label here
+putlabel :: Code -> Jasmin Code
+putlabel l = emit l ++ ":"
+ 
+-- | Goto another label
+goto :: Code -> Jasmin Code
+goto l = emit "goto" ++ l
+
 ---
 
 instance Compileable Definition where
@@ -176,6 +194,7 @@ instance Compileable Expr where
   assemble (ETyped TDouble (ENeg e)) = do
     assemble e
     emit "dneg"
+  
   
   assemble e = error $ "Non-compilable expression: " ++ show e
 
