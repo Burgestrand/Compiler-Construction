@@ -234,6 +234,13 @@ instance Compileable Block where
 instance Compileable Statement where
   assemble (SIf (ETyped _ (EBool LTrue))  s) = assemble s
   assemble (SIf (ETyped _ (EBool LFalse)) _) = emit ""
+  assemble (SIf e s) = do
+    skiplabel <- getlabel
+    assemble e
+    goto_if_zero skiplabel
+    assemble s
+    putlabel skiplabel
+    emit "nop"
   
   assemble (SBlock e) = assemble e
       
