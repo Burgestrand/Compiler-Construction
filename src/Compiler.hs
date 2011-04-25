@@ -52,6 +52,10 @@ typestring TDouble = "D"
 typestring TBool   = "I"
 typestring TVoid   = "V"
 
+-- | Given an expression, always return unit.
+void :: (Monad m) => m a -> m ()
+void m = m >> return ()
+
 ---
 
 class Compileable x where
