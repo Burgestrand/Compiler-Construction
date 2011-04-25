@@ -9,7 +9,7 @@ import Control.Monad
 import Data.Char (toUpper)
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
-import System.FilePath (dropExtensions, takeBaseName)
+import System.FilePath
 import System.IO
 import System.Process (rawSystem)
 import System.Exit
@@ -30,15 +30,15 @@ parselex = pProgram . myLexer
 
 -- | Compile a file given its’ name.
 jasmin :: String -> IO ExitCode
-jasmin source = rawSystem "java" ["-jar", "lib/jasmin.jar", source]
+jasmin source = rawSystem "java" ["-jar", "lib/jasmin.jar", "-d", takeDirectory source, source]
 
 main :: IO ()
 main = do
     args <- getArgs
     case args of
       [file] -> do
-        let name   = titleize $ dropExtensions (takeBaseName file)
-        let target = name ++ ".j"
+        let name   = dropExtensions (takeBaseName file)
+        let target = dropExtensions file ++ ".j"
         source  <- readFile file
         program <- return $ do
           program <- parselex source
