@@ -118,7 +118,6 @@ call func targs returns = do
   emit $ "invokestatic " ++ name ++ "(" ++ args ++ ")" ++ typestring returns
 
 -- | Return a value of a given type.
--- TODO: Modify stack?
 jreturn :: Type -> Jasmin Code
 jreturn TDouble = emit "dreturn"
 jreturn TBool   = emit "ireturn"
