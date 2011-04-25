@@ -42,6 +42,13 @@ type_of (EInt _)    = TInt
 type_of (EDouble _) = TDouble
 type_of (EBool _)   = TBool
 
+-- | Gives the type as a string of a given type.
+typestring :: Type -> String
+typestring TInt    = "I"
+typestring TDouble = "D"
+typestring TBool   = "I"
+typestring TVoid   = "V"
+
 ---
 
 class Compileable x where
@@ -106,11 +113,7 @@ instance Compileable Definition where
   assemble (Definition returns (Ident name) args code) = do
     args <- intercalate ";" `fmap` mapM assemble args
     let signature  = "public static " ++ name
-    let returntype = case returns of
-                     TInt    -> "I"
-                     TDouble -> "D"
-                     TBool   -> "B"
-                     TVoid   -> "V"
+    let returntype = typestring returns
     
     directive "method" (signature ++ "(" ++ args ++ ")" ++ returntype)
     pass $ do
@@ -120,10 +123,7 @@ instance Compileable Definition where
     directive "end" "method"
 
 instance Compileable Arg where
-  assemble (Arg t x) = return $ case t of
-    TInt    -> "I"
-    TDouble -> "D"
-    TBool   -> "B"
+  assemble (Arg t x) = return $ typestring t
 
 instance Compileable Block where
   assemble (Block code) = concat `fmap` mapM assemble code
