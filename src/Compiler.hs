@@ -130,7 +130,7 @@ jreturn TVoid   = emit "return"
 
 instance Compileable Definition where
   assemble (Definition returns (Ident name) args code) = do
-    args <- intercalate ";" `fmap` mapM assemble args
+    args <- intercalate "," `fmap` mapM assemble args
     let signature  = "public static " ++ name
     
     directive "method" (signature ++ "(" ++ args ++ ")" ++ type2str returns)
