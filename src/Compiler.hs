@@ -203,6 +203,28 @@ instance Compileable Expr where
   assemble (ETyped tp (ENeg e)) = do
     assemble e
     neg tp
+  assemble (ETyped tp (ENot e)) = undefined --TODO
+  assemble (ETyped tp (EMul e1 op e2)) = do
+    assemble e1
+    assemble e2
+    stackdec
+    emit (case tp of
+      TInt    -> "i"
+      TDouble -> "d") ++ (case op of
+      Times -> "mul"
+      Div   -> "div"
+      Mod   -> "rem")
+  assemble (ETyped tp (EAdd e1 op e2)) = do
+    assemble e1
+    assemble e2
+    stackdec
+    emit (case tp of
+      TInt    -> "i"
+      TDouble -> "d") ++ (case op of
+      Plus  -> "add"
+      Minus -> "sub")
+  
+  
   
   
   assemble e = error $ "Non-compilable expression: " ++ show e
