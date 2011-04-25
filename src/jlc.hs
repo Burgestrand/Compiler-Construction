@@ -13,6 +13,7 @@ import System.FilePath
 import System.IO
 import System.Process (rawSystem)
 import System.Exit
+import System.Directory
 
 -- utility
 titleize :: String -> String
@@ -38,7 +39,7 @@ main = do
     case args of
       [file] -> do
         let name   = dropExtensions (takeBaseName file)
-        let target = dropExtensions file ++ ".j"
+        target  <- canonicalizePath (dropExtensions file ++ ".j")
         source  <- readFile file
         program <- return $ do
           program <- parselex source
