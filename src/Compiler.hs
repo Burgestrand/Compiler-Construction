@@ -170,6 +170,12 @@ instance Compileable Expr where
   assemble (ETyped returns (ECall (Ident func) args)) = do
     mapM_ assemble args
     call func args returns
+  assemble (ETyped TInt (ENeg e)) = do
+    assemble e
+    emit "ineg"
+  assemble (ETyped TDouble (ENeg e)) = do
+    assemble e
+    emit "dneg"
   
   assemble e = error $ "Non-compilable expression: " ++ show e
 
