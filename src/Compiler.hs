@@ -7,6 +7,8 @@ import Control.Monad.State
 import Control.Monad.Writer
 
 import Data.List
+import Data.Map (Map)
+import qualified Data.Map as Map
 
 ---
 
@@ -20,7 +22,10 @@ data Compilation = Compilation {
   name :: String,
   
   -- | (Current, Maximum)
-  stack :: Stack
+  stack :: Stack,
+  
+  -- | Maps a variable name to its’ index and its’ type
+  locals :: Map Ident (Int, Type)
 }
 
 --
@@ -187,7 +192,7 @@ instance Compileable Expr where
 
 compiler :: (Compileable x) => String -> x -> Code
 compiler name x = intercalate "\n" $ execWriter $ runStateT (assemble x) state
-  where state = Compilation name (0, 0) 
+  where state = Compilation name (0, 0) Map.empty
 
 ---
 
