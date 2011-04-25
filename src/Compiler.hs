@@ -40,18 +40,20 @@ is_literal (EBool _)   = True
 is_literal (EString _) = True
 is_literal _           = False
 
--- | Gives the type of a given expression.
-type_of :: Expr -> Type
-type_of (EInt _)    = TInt
-type_of (EDouble _) = TDouble
-type_of (EBool _)   = TBool
+-- | Gives the string type of a given expression.
+type_of :: Expr -> String
+type_of (EInt _)     = "I"
+type_of (EDouble _)  = "D"
+type_of (EBool _)    = "I"
+type_of (EString _)  = "Ljava/lang/String" -- ?!
+type_of (ETyped t _) = type2str t
 
--- | Gives the type as a string of a given type.
-typestring :: Type -> String
-typestring TInt    = "I"
-typestring TDouble = "D"
-typestring TBool   = "I"
-typestring TVoid   = "V"
+-- | Convert a type to a string (similar to type_of)
+type2str :: Type -> String
+type2str TInt    = "I"
+type2str TDouble = "D"
+type2str TBool   = "I"
+type2str TVoid   = "V"
 
 -- | Given an expression, always return unit.
 void :: (Monad m) => m a -> m ()
@@ -107,15 +109,15 @@ push expr = do
     emit $ fn ++ value
 
 -- | Call a static function: name, args, returns
-call :: String -> [Type] -> Type -> Jasmin Code
+call :: String -> [Expr] -> Type -> Jasmin Code
 call func targs returns = do
   mapM (const stackdec) targs               -- decrease stack once for each arg
   unless (returns == TVoid) (void stackinc) -- increase stack once for return type
   
   klass <- gets name
-  let args = intercalate ";" (map typestring targs)
+  let args = intercalate ";" (map type_of targs)
   let name = klass ++ "/" ++ func
-  emit $ "invokestatic " ++ name ++ "(" ++ args ++ ")" ++ typestring returns
+  emit $ "invokestatic " ++ name ++ "(" ++ args ++ ")" ++ type2str returns
 
 -- | Return a value of a given type.
 jreturn :: Type -> Jasmin Code
@@ -130,9 +132,8 @@ instance Compileable Definition where
   assemble (Definition returns (Ident name) args code) = do
     args <- intercalate ";" `fmap` mapM assemble args
     let signature  = "public static " ++ name
-    let returntype = typestring returns
     
-    directive "method" (signature ++ "(" ++ args ++ ")" ++ returntype)
+    directive "method" (signature ++ "(" ++ args ++ ")" ++ type2str returns)
     pass $ do
       assemble code
       (_, s) <- gets stack
@@ -140,7 +141,7 @@ instance Compileable Definition where
     directive "end" "method"
 
 instance Compileable Arg where
-  assemble (Arg t x) = return $ typestring t
+  assemble (Arg t x) = return $ type2str t
 
 instance Compileable Block where
   assemble (Block code) = concat `fmap` mapM assemble code
@@ -160,7 +161,7 @@ instance Compileable Expr where
   assemble (ETyped t e) | is_literal e = assemble e
   assemble (ETyped returns (ECall (Ident func) args)) = do
     mapM_ assemble args
-    call func (map (\(ETyped t _) -> t) args) returns
+    call func args returns
   
   assemble e = error $ "Non-compilable expression: " ++ show e
 
