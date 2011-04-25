@@ -98,7 +98,7 @@ getlabel :: Jasmin Code
 getlabel = do
   label <- ((1+) . label) `fmap` get
   modify (\state -> state { label = label })
-  return "lab" ++ show label
+  return ("lab" ++ show label)
 
 -- > High Level
 
@@ -151,11 +151,11 @@ jreturn TVoid   = emit "return"
 
 -- | Place a label here
 putlabel :: Code -> Jasmin Code
-putlabel l = emit l ++ ":"
+putlabel l = emit (l ++ ":")
  
 -- | Goto another label
 goto :: Code -> Jasmin Code
-goto l = emit "goto" ++ l
+goto l = emit ("goto " ++ l)
 
 -- | Negate the previous expression (double or integer)
 neg :: Type -> Jasmin Code
@@ -211,7 +211,7 @@ instance Compileable Expr where
 
 compiler :: (Compileable x) => String -> x -> Code
 compiler name x = intercalate "\n" $ execWriter $ runStateT (assemble x) state
-  where state = Compilation name (0, 0) Map.empty
+  where state = Compilation name (0, 0) Map.empty 0
 
 ---
 
