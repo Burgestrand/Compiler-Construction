@@ -206,18 +206,21 @@ storeVar name e | is_literal e = do
 
 instance Compileable Definition where
   assemble (Definition returns (Ident name) args code) = do
-    args <- intercalate "," `fmap` mapM assemble args
-    let signature  = "public static " ++ name
+      args <- intercalate "," `fmap` mapM assemble args
+      let signature  = "public static " ++ name
     
-    directive "method" (signature ++ "(" ++ args ++ ")" ++ type2str returns)
-    pass $ do
-      case code of
-        (Block []) -> jreturn TVoid
-        _          -> assemble code
-      (_, s) <- gets stack
-      locals <- Map.size `fmap` gets locals
-      return ((), ([".limit stack " ++ show s, ".limit locals " ++ show locals] ++ ))
-    directive "end" "method"
+      directive "method" (signature ++ "(" ++ args ++ ")" ++ type2str returns)
+      pass $ do
+        case code of
+          (Block []) -> jreturn TVoid
+          _          -> assemble code
+        (_, stack) <- gets stack
+        locals <- Map.size `fmap` gets locals
+        return ((), (\code -> limits stack locals:indent code))
+      directive "end" "method"
+    where
+      indent xs = map ("  " ++) xs
+      limits stack locals = ".limit stack " ++ show stack ++ "\n.limit locals " ++ show locals
 
 instance Compileable Arg where
   assemble (Arg t x) = return $ type2str t
