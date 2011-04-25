@@ -105,20 +105,6 @@ getlabel = do
   modify (\state -> state { label = label })
   return ("lab" ++ show label)
 
--- | Load a local variable of index N of type Type.
-load :: Type -> Int -> Jasmin Code
-load tp i = do
-  stackinc
-  let func = if tp == TDouble then "dload" else "iload"
-  emit $ func ++ " " ++ (show i)
-
--- | Store the top of the stack in local variable N
-store :: Type -> Int -> Jasmin Code
-store tp i = do
-  stackdec
-  let func = if tp == TDouble then "dstore" else "istore"
-  emit $ func ++ " " ++ (show i)
-
 -- > High Level
 
 -- | Emit a directive with the specified name and parameters.
@@ -182,13 +168,16 @@ neg TDouble = emit "dneg"
 neg TInt    = emit "ineg"
 
 -- | Fetch a local variable by putting it on the stack.
-fetch :: Ident -> Jasmin (Type, Int)
-fetch name = do
+fetchVar :: Ident -> Jasmin (Int, Type)
+fetchVar name = do
     (i, tp) <- find name `fmap` gets locals
-    load tp i
-    return (tp, i)
+    stackinc
+    emit $ load tp ++ " " ++ (show i)
+    return (i, tp)
   where
     find = flip (Map.!)
+    load TDouble = "dload"
+    load _       = "iload"
 
 ---
 
