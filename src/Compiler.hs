@@ -175,7 +175,8 @@ instance Compileable Definition where
         (Block []) -> jreturn TVoid
         _          -> assemble code
       (_, s) <- gets stack
-      return ((), ((".limit stack " ++ show s):))
+      locals <- Map.size `fmap` gets locals
+      return ((), ([".limit stack " ++ show s, ".limit locals " ++ show locals] ++ ))
     directive "end" "method"
 
 instance Compileable Arg where
