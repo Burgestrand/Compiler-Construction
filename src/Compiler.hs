@@ -151,7 +151,9 @@ instance Compileable Statement where
     assemble e
     jreturn tp
   
-  assemble e = error $ "Uncompilable statement: " ++ show e
+  assemble (SExpr e) = assemble e
+  
+  assemble e = error $ "Non-compilable statement: " ++ show e
 
 instance Compileable Expr where
   assemble (ETyped t e) | is_literal e = push e
