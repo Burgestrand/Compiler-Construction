@@ -163,31 +163,33 @@ putlabel l = emit (l ++ ":")
 goto :: Code -> Jasmin Code
 goto l = emit ("goto " ++ l)
 
+-- | Go to another label if value on top of stack is 0
+goto_if_zero :: Code -> Jasmin Code
+goto_if_zero l = emit ("ifeq " ++ l)
+
 -- | Negate the previous expression (double or integer)
 neg :: Type -> Jasmin Code
 neg TDouble = emit "dneg"
 neg TInt    = emit "ineg"
 
 -- | Fetch a local variable by putting it on the stack.
-fetchVar :: Ident -> Jasmin (Int, Type)
+fetchVar :: Ident -> Jasmin Code
 fetchVar name = do
     (i, tp) <- find name `fmap` gets locals
     stackinc
     emit $ load tp ++ " " ++ (show i)
-    return (i, tp)
   where
     find = flip (Map.!)
     load TDouble = "dload"
     load _       = "iload"
 
 -- | Store a literal as a local variable; returns its’ index.
-storeVar :: Ident -> Expr -> Jasmin Int
-storeVar name e | is_literal e = do
-    let tp = expr2type e
+storeVar :: Ident -> Type -> Jasmin Code
+storeVar name tp = do
     localVars <- gets locals
     
     -- if a new variable then store its index!
-    when (isJust $ Map.lookup name localVars) $ do
+    when (isNothing $ Map.lookup name localVars) $ do
       let locals' = Map.insert name (Map.size localVars, tp) localVars
       modify (\state -> state { locals = locals' })
     
@@ -196,7 +198,6 @@ storeVar name e | is_literal e = do
     
     stackdec
     emit $ store tp ++ " " ++ (show i)
-    return i
   where
     find = flip (Map.!)
     store TDouble = "dstore"
@@ -240,6 +241,15 @@ instance Compileable Statement where
     jreturn tp
   
   assemble (SExpr e) = assemble e
+  assemble (SDeclaration tp ds) = intercalate "\n" `fmap` mapM declare ds
+    where
+      declare :: Declaration -> Jasmin Code
+      declare (DNoInit name) = do
+          push (initial tp)
+          storeVar name tp
+        where
+          initial TDouble = (EDouble 0)
+          initial _       = (EInt 0)
   
   assemble e = error $ "Non-compilable statement: " ++ show e
 
@@ -329,7 +339,7 @@ instance Compileable Expr where
     stackdec
     emit "ior"
   
-  
+  assemble (ETyped tp (EVar name)) = fetchVar name
   assemble e = error $ "Non-compilable expression: " ++ show e
 
 ---
