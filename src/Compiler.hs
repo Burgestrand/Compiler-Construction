@@ -45,7 +45,7 @@ type_of :: Expr -> String
 type_of (EInt _)     = "I"
 type_of (EDouble _)  = "D"
 type_of (EBool _)    = "I"
-type_of (EString _)  = "Ljava/lang/String" -- ?!
+type_of (EString _)  = "Ljava/lang/String;" -- ?!
 type_of (ETyped t _) = type2str t
 
 -- | Convert a type to a string (similar to type_of)
