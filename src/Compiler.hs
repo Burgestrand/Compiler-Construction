@@ -208,7 +208,7 @@ instance Compileable Expr where
     assemble e1
     assemble e2
     stackdec
-    emit (case tp of
+    emit $ (case tp of
       TInt    -> "i"
       TDouble -> "d") ++ (case op of
       Times -> "mul"
@@ -218,7 +218,7 @@ instance Compileable Expr where
     assemble e1
     assemble e2
     stackdec
-    emit (case tp of
+    emit $ (case tp of
       TInt    -> "i"
       TDouble -> "d") ++ (case op of
       Plus  -> "add"
