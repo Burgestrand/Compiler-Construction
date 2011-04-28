@@ -26,7 +26,7 @@ data Compilation = Compilation {
   stack :: Stack,
   
   -- | Maps a variable name to its’ index and its’ type
-  locals :: (Int, Map Ident (Int, Type)),
+  locals :: (Int, [Map Ident (Int, Type)]),
   
   -- | Label counter
   label :: Integer
@@ -179,31 +179,35 @@ fetchVar name = do
     stackinc
     load tp (show i)
   where
-    find = flip (Map.!)
+    find id (x:xs) | Map.member id x = (Map.!) x id
+                   | otherwise       = find id xs
     load TDouble i = stackinc >> emit ("dload " ++ i)
     load _       i = emit ("iload " ++ i)
 
--- | Store a literal as a local variable; returns its’ index.
+-- | Declares a new variable in the current scope
+declareVar :: Ident -> Type -> Jasmin Code
+declareVar name tp = do
+    (size, (scope:scopes)) <- gets locals
+    
+    let scope' = Map.insert name (size, tp) scope
+    modify (\state -> state { locals = (size + sizeof tp, (scope':scopes)) })
+    return []
+  where
+    sizeof TDouble  = 2
+    sizeof _        = 1
+    
+-- | Store a literal in a local variable; returns its’ index.
 storeVar :: Ident -> Type -> Jasmin Code
 storeVar name tp = do
-    (size, localVars) <- gets locals
-    
-    -- if a new variable then store its index!
-    when (isNothing $ Map.lookup name localVars) $ do
-      let locals' = Map.insert name (size, tp) localVars
-      modify (\state -> state { locals = (size + sizeof tp, locals') })
-    
-    -- find the variables’ index
     (i, _) <- (find name . snd) `fmap` gets locals
     
     stackdec
     store tp (show i)
   where
-    find = flip (Map.!)
+    find id (x:xs) | Map.member id x = (Map.!) x id
+                   | otherwise       = find id xs
     store TDouble i = stackdec >> emit ("dstore " ++ i)
     store _       i = emit ("istore " ++ i)
-    sizeof TDouble  = 2
-    sizeof _        = 1
 
 ---
 
@@ -355,7 +359,7 @@ instance Compileable Expr where
 
 compiler :: (Compileable x) => String -> x -> Code
 compiler name x = intercalate "\n" $ execWriter $ runStateT (assemble x) state
-  where state = Compilation name (0, 0) (0, Map.empty) 0
+  where state = Compilation name (0, 0) (0, [Map.empty]) 0
 
 ---
 
