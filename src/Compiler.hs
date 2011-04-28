@@ -247,7 +247,10 @@ instance Compileable Statement where
     emit "nop"
   
   assemble (SBlock e) = assemble e
-      
+  assemble (SAss name e@(ETyped tp _)) = do
+    assemble e
+    storeVar name tp
+    
   assemble (SReturnV) = jreturn TVoid
   assemble (SReturn e@(ETyped tp _)) = do
     assemble e
@@ -257,6 +260,7 @@ instance Compileable Statement where
   assemble (SDeclaration tp ds) = intercalate "\n" `fmap` mapM declare ds
     where
       declare :: Declaration -> Jasmin Code
+      declare (DInit name e@(ETyped tp _)) = assemble e >> storeVar name tp
       declare (DNoInit name) = do
           push (initial tp)
           storeVar name tp
