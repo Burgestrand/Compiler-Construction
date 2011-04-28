@@ -260,9 +260,13 @@ instance Compileable Statement where
   assemble (SDeclaration tp ds) = intercalate "\n" `fmap` mapM declare ds
     where
       declare :: Declaration -> Jasmin Code
-      declare (DInit name e@(ETyped tp _)) = assemble e >> storeVar name tp
+      declare (DInit name e@(ETyped tp _)) = do 
+          declareVar name tp 
+          assemble e 
+          storeVar name tp
       declare (DNoInit name) = do
-          push (initial tp)
+          declareVar name tp
+          push (initial tp) 
           storeVar name tp
         where
           initial TDouble = (EDouble 0)
