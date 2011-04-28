@@ -236,6 +236,7 @@ instance Compileable Block where
   assemble (Block code) = concat `fmap` mapM assemble code
 
 instance Compileable Statement where
+  assemble (SEmpty) = emit ""
   assemble (SIf (ETyped _ (EBool LTrue))  s) = assemble s
   assemble (SIf (ETyped _ (EBool LFalse)) _) = emit ""
   assemble (SIf e s) = do
@@ -244,6 +245,31 @@ instance Compileable Statement where
     goto_if_zero skiplabel
     assemble s
     putlabel skiplabel
+    emit "nop"
+    
+  assemble (SIfElse (ETyped _ (EBool LTrue))  s1 _) = assemble s1
+  assemble (SIfElse (ETyped _ (EBool LFalse)) _ s2) = assemble s2
+  assemble (SIfElse e s1 s2) = do
+    elselabel <- getlabel
+    endlabel <- getlabel
+    assemble e
+    goto_if_zero elselabel
+    assemble s1
+    goto endlabel
+    putlabel elselabel
+    assemble s2
+    putlabel endlabel
+    emit "nop"
+    
+  assemble (SWhile e s) = do
+    testlabel <- getlabel
+    endlabel <- getlabel
+    putlabel testlabel
+    assemble e
+    goto_if_zero endlabel
+    assemble s
+    goto testlabel
+    putlabel endlabel
     emit "nop"
   
   assemble (SBlock e) = assemble e
@@ -271,6 +297,7 @@ instance Compileable Statement where
         where
           initial TDouble = (EDouble 0)
           initial _       = (EInt 0)
+          
   
   assemble e = error $ "Non-compilable statement: " ++ show e
 
