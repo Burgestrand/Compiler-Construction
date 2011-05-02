@@ -181,6 +181,7 @@ fetchVar name = do
   where
     find id (x:xs) | Map.member id x = (Map.!) x id
                    | otherwise       = find id xs
+    find id _ = error $ (show id) ++ " not found"
     load TDouble i = stackinc >> emit ("dload " ++ i)
     load _       i = emit ("iload " ++ i)
 
@@ -213,6 +214,7 @@ storeVar name tp = do
 
 instance Compileable Definition where
   assemble (Definition returns (Ident name) args code) = do
+      mapM declareArg args
       args <- intercalate "," `fmap` mapM assemble args
       let signature  = "public static " ++ name
     
@@ -228,6 +230,7 @@ instance Compileable Definition where
     where
       indent xs = map ("  " ++) xs
       limits stack locals = ".limit stack " ++ show stack ++ "\n.limit locals " ++ show locals
+      declareArg (Arg t id) = declareVar id t
 
 instance Compileable Arg where
   assemble (Arg t x) = return $ type2str t
@@ -271,6 +274,19 @@ instance Compileable Statement where
     goto testlabel
     putlabel endlabel
     emit "nop"
+  assemble (SInc id) = do
+    fetchVar id
+    push (EInt 1)
+    emit "iadd"
+    stackdec
+    storeVar id TInt
+  assemble (SDec id) = do
+    fetchVar id
+    push (EInt 1)
+    emit "idec"
+    stackdec
+    storeVar id TInt
+       
   
   assemble (SBlock e) = assemble e
   assemble (SAss name e@(ETyped tp _)) = do
@@ -349,9 +365,11 @@ instance Compileable Expr where
       TBool   -> "i"
       TInt    -> "i"
       TDouble -> "d") ++ "sub"
+    stackdec
     emit $ (case op of
       EQU -> "ifeq " 
       NE  -> "ifne ")++ lab_t
+    stackdec
     push (EBool LFalse)
     goto lab_f
     putlabel lab_t
@@ -366,11 +384,13 @@ instance Compileable Expr where
     emit $ (case tp of
       TInt    -> "i"
       TDouble -> "d") ++ "sub"
+    stackdec
     emit $ (case op of
       LTH -> "iflt "
       LE  -> "ifle "
       GTH -> "ifgt "
       GE  -> "ifge ") ++ lab_t
+    stackdec
     push (EBool LFalse)
     goto lab_f
     putlabel lab_t
