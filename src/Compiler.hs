@@ -210,6 +210,15 @@ storeVar name tp = do
     store TDouble i = stackdec >> emit ("dstore " ++ i)
     store _       i = emit ("istore " ++ i)
 
+inScope :: Jasmin a -> Jasmin a
+inScope f = do
+   (size, scopes) <- gets locals
+   modify (\state -> state { locals = (size, (Map.empty:scopes)) })
+   x <- f
+   (size, scopes) <- gets locals
+   modify (\state -> state { locals = (size, tail scopes) })
+   return x
+
 ---
 
 instance Compileable Definition where
@@ -236,7 +245,8 @@ instance Compileable Arg where
   assemble (Arg t x) = return $ type2str t
 
 instance Compileable Block where
-  assemble (Block code) = concat `fmap` mapM assemble code
+  assemble (Block code) = inScope $ do 
+    concat `fmap` mapM assemble code
 
 instance Compileable Statement where
   assemble (SEmpty) = emit ""
