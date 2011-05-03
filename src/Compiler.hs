@@ -238,7 +238,7 @@ storeVar name = do
     (i, tp) <- (find name . snd) `fmap` gets locals
     
     stackdec tp
-    emit ("istore " ++ (show i))
+    tp +> "store " ++ (show i)
   where
     find id (x:xs) | Map.member id x = (Map.!) x id
                    | otherwise       = find id xs
@@ -338,8 +338,8 @@ instance Compileable Statement where
   assemble (SDeclaration tp ds) = mapM_ declare ds
     where
       declare (DInit name e@(ETyped tp _)) = do 
-          declareVar name tp 
           assemble e 
+          declareVar name tp 
           storeVar name
       declare (DNoInit name) = do
           declareVar name tp
