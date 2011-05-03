@@ -192,20 +192,26 @@ TDouble +> code = emit ("d" ++ code)
 _       +> code = emit ("i" ++ code)
 
 -- | Add `N` to local variable `M`
-iinc :: Int -> Int -> Jasmin ()
-iinc i n = TInt +> ("inc " ++ show i ++ " " ++ show n)
+iinc :: Ident -> Int -> Jasmin ()
+iinc id n = do
+  (i, tp) <- findVar id
+  tp +> ("inc " ++ show i ++ " " ++ show n)
+
+-- | Find a local variables’ index and type by its’ name
+findVar :: Ident -> Jasmin (Int, Type)
+findVar id = find `fmap` snd `fmap` gets locals
+  where
+    find (x:xs) | Map.member id x = (Map.!) x id
+                | otherwise       = find xs
+    find _ = error $ (show id) ++ " not found"
 
 -- | Fetch a local variable by putting it on the stack.
-fetchVar :: Ident -> Jasmin (Int, Type)
+fetchVar :: Ident -> Jasmin ()
 fetchVar name = do
-    (i, tp) <- (find name . snd) `fmap` gets locals
+    (i, tp) <- findVar name
     stackinc
     load tp (show i)
-    return (i, tp)
   where
-    find id (x:xs) | Map.member id x = (Map.!) x id
-                   | otherwise       = find id xs
-    find id _ = error $ (show id) ++ " not found"
     load TDouble i = stackinc >> emit ("dload " ++ i)
     load _       i = emit ("iload " ++ i)
 
@@ -304,19 +310,9 @@ instance Compileable Statement where
     goto testlabel
     putlabel endlabel
     nop
-  assemble (SInc id) = do
-    fetchVar id
-    push (EInt 1)
-    emit "iadd"
-    stackdec
-    storeVar id
-  assemble (SDec id) = do
-    fetchVar id
-    push (EInt 1)
-    emit "idec"
-    stackdec
-    storeVar id
-       
+  
+  assemble (SInc id) = iinc id 1
+  assemble (SDec id) = iinc id (-1)
   
   assemble (SBlock e) = assemble e
   assemble (SAss name e@(ETyped tp _)) = do
