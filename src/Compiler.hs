@@ -139,7 +139,7 @@ push expr = do
 -- | Call a static function: name, args, returns
 call :: String -> [Expr] -> Type -> Jasmin ()
 call func targs returns = do
-    mapM (\(ETyped t _) -> stackdec t) targs -- decrease stack once for each arg
+    mapM stackup targs -- decrease stack once for each arg
     stackinc returns -- increase stack for return type
   
     klass <- if builtin func then return "Runtime" else gets name
@@ -154,6 +154,8 @@ call func targs returns = do
     builtin "readInt"     = True
     builtin "readDouble"  = True
     builtin _             = False
+    stackup (ETyped t _) = stackdec t
+    stackup (EString _)  = stackdec TInt
 
 -- | Return a value of a given type.
 jreturn :: Type -> Jasmin ()
@@ -172,7 +174,7 @@ goto l = emit ("goto " ++ l)
 
 -- | Go to another label if value on top of stack is 0
 goto_if_zero :: Code -> Jasmin ()
-goto_if_zero l = emit ("ifeq " ++ l)
+goto_if_zero l = stackdec TInt >> emit ("ifeq " ++ l)
 
 -- | Negate the previous expression (double or integer)
 neg :: Type -> Jasmin ()
@@ -193,6 +195,7 @@ pop tp      = do
   stackdec tp
   emit "pop"
 
+infix 4 +>
 (+>) :: Type -> Code -> Jasmin ()
 TDouble +> code = emit ("d" ++ code)
 _       +> code = emit ("i" ++ code)
@@ -424,15 +427,27 @@ instance Compileable Expr where
     push (EBool LTrue)
     putlabel lab_f
   assemble (ETyped TBool (EAnd e1 e2)) = do
+    labfalse <- getlabel
+    labend <- getlabel
     assemble e1
+    goto_if_zero labfalse
     assemble e2
+    goto labend
+    putlabel labfalse
+    push (EBool LFalse)
+    putlabel labend
     stackdec TBool
-    emit "iand"
   assemble (ETyped TBool (EOr e1 e2)) = do
+    labfalse <- getlabel
+    labend <- getlabel
     assemble e1
+    goto_if_zero labfalse
+    push (EBool LTrue)
+    goto labend
+    putlabel labfalse
     assemble e2
+    putlabel labend
     stackdec TBool
-    emit "ior"
   
   assemble (ETyped tp (EVar name)) = void (fetchVar name)
   assemble e = error $ "Non-compilable expression: " ++ show e
