@@ -172,12 +172,17 @@ neg :: Type -> Jasmin ()
 neg TDouble = emit "dneg"
 neg TInt    = emit "ineg"
 
+
+-- | Emits a nop nop!
+nop = emit "nop"
+
+-- | Pop a thingy of type Type off the stack
 pop :: Type -> Jasmin ()
+pop TVoid   = emit ""
 pop TDouble = do
   stackdec
   stackdec
   emit "pop2"
-pop TVoid   = emit ""
 pop _       = do
   stackdec
   emit "pop"
@@ -267,7 +272,7 @@ instance Compileable Statement where
     goto_if_zero skiplabel
     assemble s
     putlabel skiplabel
-    emit "nop"
+    nop
     
   assemble (SIfElse (ETyped _ (EBool LTrue))  s1 _) = assemble s1
   assemble (SIfElse (ETyped _ (EBool LFalse)) _ s2) = assemble s2
@@ -281,7 +286,7 @@ instance Compileable Statement where
     putlabel elselabel
     assemble s2
     putlabel endlabel
-    emit "nop"
+    nop
     
   assemble (SWhile e s) = do
     testlabel <- getlabel
@@ -292,7 +297,7 @@ instance Compileable Statement where
     assemble s
     goto testlabel
     putlabel endlabel
-    emit "nop"
+    nop
   assemble (SInc id) = do
     fetchVar id
     push (EInt 1)
