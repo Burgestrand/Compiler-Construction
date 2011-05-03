@@ -76,27 +76,26 @@ void m = m >> return ()
 ---
 
 class Compileable x where
-  assemble :: x -> Jasmin Code
+  assemble :: x -> Jasmin ()
 
 -- > Low Level
 
 -- | Emit a piece of code verbatim.
-emit :: Code -> Jasmin Code
-emit x = tell [x] >> return x
+emit :: Code -> Jasmin ()
+emit x = tell [x]
 
 -- | Modify the stack with a user-given function, returning the return value.
-stackmod :: (Stack -> Stack) -> Jasmin Stack
+stackmod :: (Stack -> Stack) -> Jasmin ()
 stackmod fn = do
   stack <- (fn . stack) `fmap` get
   modify (\state -> state { stack = stack })
-  return stack
 
 -- | Increase the stack size, returning the new Stack.
-stackinc :: Jasmin Stack
+stackinc :: Jasmin ()
 stackinc = stackmod (\(x, y) -> (x + 1, max (x + 1) y))
 
 -- | Decrease the stack size, returnin gthe new Stack.
-stackdec :: Jasmin Stack
+stackdec :: Jasmin ()
 stackdec = stackmod (\(x, y) -> (x - 1, y))
 
 -- | Generating a new unique label, returning that label
@@ -109,11 +108,11 @@ getlabel = do
 -- > High Level
 
 -- | Emit a directive with the specified name and parameters.
-directive :: String -> String -> Jasmin Code
+directive :: String -> String -> Jasmin ()
 directive name args = emit ("." ++ name ++ " " ++ args)
 
 -- | Push an expression constant, also modifying the stack.
-push :: Expr -> Jasmin Code
+push :: Expr -> Jasmin ()
 push expr = do
     let value = case expr of
                 (EInt x)    -> show x
@@ -130,7 +129,7 @@ push expr = do
     emit $ fn ++ value
 
 -- | Call a static function: name, args, returns
-call :: String -> [Expr] -> Type -> Jasmin Code
+call :: String -> [Expr] -> Type -> Jasmin ()
 call func targs returns = do
     mapM (const stackdec) targs               -- decrease stack once for each arg
     unless (returns == TVoid)   (void stackinc) -- increase stack once for return type
@@ -150,30 +149,30 @@ call func targs returns = do
     builtin _             = False
 
 -- | Return a value of a given type.
-jreturn :: Type -> Jasmin Code
+jreturn :: Type -> Jasmin ()
 jreturn TDouble = emit "dreturn"
 jreturn TBool   = emit "ireturn"
 jreturn TInt    = emit "ireturn"
 jreturn TVoid   = emit "return"
 
 -- | Place a label here
-putlabel :: Code -> Jasmin Code
+putlabel :: Code -> Jasmin ()
 putlabel l = emit (l ++ ":")
  
 -- | Goto another label
-goto :: Code -> Jasmin Code
+goto :: Code -> Jasmin ()
 goto l = emit ("goto " ++ l)
 
 -- | Go to another label if value on top of stack is 0
-goto_if_zero :: Code -> Jasmin Code
+goto_if_zero :: Code -> Jasmin ()
 goto_if_zero l = emit ("ifeq " ++ l)
 
 -- | Negate the previous expression (double or integer)
-neg :: Type -> Jasmin Code
+neg :: Type -> Jasmin ()
 neg TDouble = emit "dneg"
 neg TInt    = emit "ineg"
 
-pop :: Type -> Jasmin Code
+pop :: Type -> Jasmin ()
 pop TDouble = do
   stackdec
   stackdec
@@ -184,11 +183,12 @@ pop _       = do
   emit "pop"
 
 -- | Fetch a local variable by putting it on the stack.
-fetchVar :: Ident -> Jasmin Code
+fetchVar :: Ident -> Jasmin Type
 fetchVar name = do
     (i, tp) <- (find name . snd) `fmap` gets locals
     stackinc
     load tp (show i)
+    return tp
   where
     find id (x:xs) | Map.member id x = (Map.!) x id
                    | otherwise       = find id xs
@@ -197,7 +197,7 @@ fetchVar name = do
     load _       i = emit ("iload " ++ i)
 
 -- | Declares a new variable in the current scope
-declareVar :: Ident -> Type -> Jasmin Code
+declareVar :: Ident -> Type -> Jasmin ()
 declareVar name tp = do
     (size, (scope:scopes)) <- gets locals
     
@@ -209,9 +209,9 @@ declareVar name tp = do
     sizeof _        = 1
     
 -- | Store a literal in a local variable; returns its’ index.
-storeVar :: Ident -> Type -> Jasmin Code
-storeVar name tp = do
-    (i, _) <- (find name . snd) `fmap` gets locals
+storeVar :: Ident -> Jasmin ()
+storeVar name = do
+    (i, tp) <- (find name . snd) `fmap` gets locals
     
     stackdec
     store tp (show i)
@@ -235,10 +235,10 @@ inScope f = do
 instance Compileable Definition where
   assemble (Definition returns (Ident name) args code) = do
       mapM declareArg args
-      args <- intercalate "," `fmap` mapM assemble args
+      let args' = intercalate "," $ map writeArg args
       let signature  = "public static " ++ name
     
-      directive "method" (signature ++ "(" ++ args ++ ")" ++ type2str returns)
+      directive "method" (signature ++ "(" ++ args' ++ ")" ++ type2str returns)
       pass $ do
         case code of
           (Block []) -> jreturn TVoid
@@ -251,9 +251,7 @@ instance Compileable Definition where
       indent xs = map ("  " ++) xs
       limits stack locals = ".limit stack " ++ show stack ++ "\n.limit locals " ++ show locals
       declareArg (Arg t id) = declareVar id t
-
-instance Compileable Arg where
-  assemble (Arg t x) = return $ type2str t
+      writeArg (Arg t x) = type2str t
 
 instance Compileable Block where
   assemble (Block code) = inScope $ do 
@@ -300,19 +298,19 @@ instance Compileable Statement where
     push (EInt 1)
     emit "iadd"
     stackdec
-    storeVar id TInt
+    storeVar id
   assemble (SDec id) = do
     fetchVar id
     push (EInt 1)
     emit "idec"
     stackdec
-    storeVar id TInt
+    storeVar id
        
   
   assemble (SBlock e) = assemble e
   assemble (SAss name e@(ETyped tp _)) = do
     assemble e
-    storeVar name tp
+    storeVar name
     
   assemble (SReturnV) = jreturn TVoid
   assemble (SReturn e@(ETyped tp _)) = do
@@ -322,32 +320,27 @@ instance Compileable Statement where
   assemble (SExpr e@(ETyped tp _)) = do
     (stacksize, _) <- gets stack
     assemble e
-    case tp of
-      TVoid   -> emit ""
-      TDouble -> emit "pop2"
-      _       -> emit "pop"
+    pop tp
     
     (stacksize', _) <- gets stack
-    if (stacksize /= stacksize') 
-      then (fail $ "Incorrect stack size in expr " ++ show e ++ " before: " ++ show stacksize ++ ", after: " ++ show stacksize') 
-      else return []
-  assemble (SDeclaration tp ds) = intercalate "\n" `fmap` mapM declare ds
-    where
-      declare :: Declaration -> Jasmin Code
-      declare (DInit name e@(ETyped tp _)) = do 
-          declareVar name tp 
-          assemble e 
-          storeVar name tp
-      declare (DNoInit name) = do
-          declareVar name tp
-          push (initial tp) 
-          storeVar name tp
-        where
-          initial TDouble = (EDouble 0)
-          initial _       = (EInt 0)
-          
+    when (stacksize /= stacksize') (fail $ "Incorrect stack size in expr " ++ show e ++ " before: " ++ show stacksize ++ ", after: " ++ show stacksize') 
+    
+  assemble (SDeclaration tp ds) = mapM assemble ds
   
   assemble e = error $ "Non-compilable statement: " ++ show e
+  
+instance Compileable Declaration where
+  assemble (DInit name e@(ETyped tp _)) = do 
+    declareVar name tp 
+    assemble e 
+    storeVar name
+  assemble (DNoInit name) = do
+      declareVar name tp
+      push (initial tp) 
+      storeVar name
+    where
+      initial TDouble = (EDouble 0)
+      initial _       = (EInt 0)
 
 instance Compileable Expr where
   assemble e | is_literal e = push e
