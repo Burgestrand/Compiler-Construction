@@ -39,7 +39,7 @@ end
 
 desc "Test the implementation using the built-in testing thingies"
 task :test => :compile do
-  system '[[ -d "tmp/" ]] && rm -r tmp'
+  system 'rm -r tmp'
   system 'mkdir tmp'
   Dir.chdir 'tmp' do
     system [

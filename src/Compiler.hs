@@ -26,7 +26,7 @@ data Compilation = Compilation {
   stack :: Stack,
   
   -- | Maps a variable name to its’ index and its’ type
-  locals :: (Int, Map Ident (Int, Type)),
+  locals :: (Int, [Map Ident (Int, Type)]),
   
   -- | Label counter
   label :: Integer
@@ -179,36 +179,51 @@ fetchVar name = do
     stackinc
     load tp (show i)
   where
-    find = flip (Map.!)
+    find id (x:xs) | Map.member id x = (Map.!) x id
+                   | otherwise       = find id xs
+    find id _ = error $ (show id) ++ " not found"
     load TDouble i = stackinc >> emit ("dload " ++ i)
     load _       i = emit ("iload " ++ i)
 
--- | Store a literal as a local variable; returns its’ index.
+-- | Declares a new variable in the current scope
+declareVar :: Ident -> Type -> Jasmin Code
+declareVar name tp = do
+    (size, (scope:scopes)) <- gets locals
+    
+    let scope' = Map.insert name (size, tp) scope
+    modify (\state -> state { locals = (size + sizeof tp, (scope':scopes)) })
+    return []
+  where
+    sizeof TDouble  = 2
+    sizeof _        = 1
+    
+-- | Store a literal in a local variable; returns its’ index.
 storeVar :: Ident -> Type -> Jasmin Code
 storeVar name tp = do
-    (size, localVars) <- gets locals
-    
-    -- if a new variable then store its index!
-    when (isNothing $ Map.lookup name localVars) $ do
-      let locals' = Map.insert name (size, tp) localVars
-      modify (\state -> state { locals = (size + sizeof tp, locals') })
-    
-    -- find the variables’ index
     (i, _) <- (find name . snd) `fmap` gets locals
     
     stackdec
     store tp (show i)
   where
-    find = flip (Map.!)
+    find id (x:xs) | Map.member id x = (Map.!) x id
+                   | otherwise       = find id xs
     store TDouble i = stackdec >> emit ("dstore " ++ i)
     store _       i = emit ("istore " ++ i)
-    sizeof TDouble  = 2
-    sizeof _        = 1
+
+inScope :: Jasmin a -> Jasmin a
+inScope f = do
+   (size, scopes) <- gets locals
+   modify (\state -> state { locals = (size, (Map.empty:scopes)) })
+   x <- f
+   (size, scopes) <- gets locals
+   modify (\state -> state { locals = (size, tail scopes) })
+   return x
 
 ---
 
 instance Compileable Definition where
   assemble (Definition returns (Ident name) args code) = do
+      mapM declareArg args
       args <- intercalate "," `fmap` mapM assemble args
       let signature  = "public static " ++ name
     
@@ -224,14 +239,17 @@ instance Compileable Definition where
     where
       indent xs = map ("  " ++) xs
       limits stack locals = ".limit stack " ++ show stack ++ "\n.limit locals " ++ show locals
+      declareArg (Arg t id) = declareVar id t
 
 instance Compileable Arg where
   assemble (Arg t x) = return $ type2str t
 
 instance Compileable Block where
-  assemble (Block code) = concat `fmap` mapM assemble code
+  assemble (Block code) = inScope $ do 
+    concat `fmap` mapM assemble code
 
 instance Compileable Statement where
+  assemble (SEmpty) = emit ""
   assemble (SIf (ETyped _ (EBool LTrue))  s) = assemble s
   assemble (SIf (ETyped _ (EBool LFalse)) _) = emit ""
   assemble (SIf e s) = do
@@ -241,6 +259,44 @@ instance Compileable Statement where
     assemble s
     putlabel skiplabel
     emit "nop"
+    
+  assemble (SIfElse (ETyped _ (EBool LTrue))  s1 _) = assemble s1
+  assemble (SIfElse (ETyped _ (EBool LFalse)) _ s2) = assemble s2
+  assemble (SIfElse e s1 s2) = do
+    elselabel <- getlabel
+    endlabel <- getlabel
+    assemble e
+    goto_if_zero elselabel
+    assemble s1
+    goto endlabel
+    putlabel elselabel
+    assemble s2
+    putlabel endlabel
+    emit "nop"
+    
+  assemble (SWhile e s) = do
+    testlabel <- getlabel
+    endlabel <- getlabel
+    putlabel testlabel
+    assemble e
+    goto_if_zero endlabel
+    assemble s
+    goto testlabel
+    putlabel endlabel
+    emit "nop"
+  assemble (SInc id) = do
+    fetchVar id
+    push (EInt 1)
+    emit "iadd"
+    stackdec
+    storeVar id TInt
+  assemble (SDec id) = do
+    fetchVar id
+    push (EInt 1)
+    emit "idec"
+    stackdec
+    storeVar id TInt
+       
   
   assemble (SBlock e) = assemble e
   assemble (SAss name e@(ETyped tp _)) = do
@@ -256,13 +312,18 @@ instance Compileable Statement where
   assemble (SDeclaration tp ds) = intercalate "\n" `fmap` mapM declare ds
     where
       declare :: Declaration -> Jasmin Code
-      declare (DInit name e@(ETyped tp _)) = assemble e >> storeVar name tp
+      declare (DInit name e@(ETyped tp _)) = do 
+          declareVar name tp 
+          assemble e 
+          storeVar name tp
       declare (DNoInit name) = do
-          push (initial tp)
+          declareVar name tp
+          push (initial tp) 
           storeVar name tp
         where
           initial TDouble = (EDouble 0)
           initial _       = (EInt 0)
+          
   
   assemble e = error $ "Non-compilable statement: " ++ show e
 
@@ -314,9 +375,11 @@ instance Compileable Expr where
       TBool   -> "i"
       TInt    -> "i"
       TDouble -> "d") ++ "sub"
+    stackdec
     emit $ (case op of
       EQU -> "ifeq " 
       NE  -> "ifne ")++ lab_t
+    stackdec
     push (EBool LFalse)
     goto lab_f
     putlabel lab_t
@@ -331,11 +394,13 @@ instance Compileable Expr where
     emit $ (case tp of
       TInt    -> "i"
       TDouble -> "d") ++ "sub"
+    stackdec
     emit $ (case op of
       LTH -> "iflt "
       LE  -> "ifle "
       GTH -> "ifgt "
       GE  -> "ifge ") ++ lab_t
+    stackdec
     push (EBool LFalse)
     goto lab_f
     putlabel lab_t
@@ -359,7 +424,7 @@ instance Compileable Expr where
 
 compiler :: (Compileable x) => String -> x -> Code
 compiler name x = intercalate "\n" $ execWriter $ runStateT (assemble x) state
-  where state = Compilation name (0, 0) (0, Map.empty) 0
+  where state = Compilation name (0, 0) (0, [Map.empty]) 0
 
 ---
 
