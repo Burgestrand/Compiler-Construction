@@ -195,6 +195,17 @@ pop tp      = do
   stackdec tp
   emit "pop"
 
+cmp :: Type -> Jasmin ()
+cmp TDouble = do
+  emit "dcmpg"
+  stackdec TDouble
+  stackdec TDouble
+  stackinc TInt
+cmp tp = do
+  emit "isub"
+  stackdec TInt
+  
+
 infix 4 +>
 (+>) :: Type -> Code -> Jasmin ()
 TDouble +> code = emit ("d" ++ code)
@@ -397,8 +408,7 @@ instance Compileable Expr where
     assemble e1
     assemble e2
     let (ETyped tp _) = e1
-    tp +> "sub"
-    stackdec tp
+    cmp tp
     emit $ (case op of
       EQU -> "ifeq " 
       NE  -> "ifne ")++ lab_t
@@ -414,8 +424,7 @@ instance Compileable Expr where
     assemble e1
     assemble e2
     let (ETyped tp _) = e1
-    tp +> "sub"
-    stackdec tp
+    cmp tp
     emit $ (case op of
       LTH -> "iflt "
       LE  -> "ifle "
