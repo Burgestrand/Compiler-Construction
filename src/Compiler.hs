@@ -133,7 +133,8 @@ push expr = do
 call :: String -> [Expr] -> Type -> Jasmin Code
 call func targs returns = do
     mapM (const stackdec) targs               -- decrease stack once for each arg
-    unless (returns == TVoid) (void stackinc) -- increase stack once for return type
+    unless (returns == TVoid)   (void stackinc) -- increase stack once for return type
+    when   (returns == TDouble) (void stackinc) -- increase stack once again for doubles
   
     klass <- if builtin func then return "Runtime" else gets name
     let args = intercalate "," (map type_of targs)
@@ -145,7 +146,7 @@ call func targs returns = do
     builtin "printInt"    = True
     builtin "printDouble" = True
     builtin "readInt"     = True
-    builtin "readdouble"  = True
+    builtin "readDouble"  = True
     builtin _             = False
 
 -- | Return a value of a given type.
@@ -174,6 +175,17 @@ neg TInt    = emit "ineg"
 
 -- | Emits a nop nop!
 nop = emit "nop"
+
+-- | Pop a thingy of type Type off the stack
+pop :: Type -> Jasmin Code
+pop TVoid   = emit ""
+pop TDouble = do
+  stackdec
+  stackdec
+  emit "pop2"
+pop _       = do
+  stackdec
+  emit "pop"
 
 -- | Fetch a local variable by putting it on the stack.
 fetchVar :: Ident -> Jasmin Code
@@ -311,7 +323,18 @@ instance Compileable Statement where
     assemble e
     jreturn tp
   
-  assemble (SExpr e) = assemble e
+  assemble (SExpr e@(ETyped tp _)) = do
+    (stacksize, _) <- gets stack
+    assemble e
+    case tp of
+      TVoid   -> emit ""
+      TDouble -> emit "pop2"
+      _       -> emit "pop"
+    
+    (stacksize', _) <- gets stack
+    if (stacksize /= stacksize') 
+      then (fail $ "Incorrect stack size in expr " ++ show e ++ " before: " ++ show stacksize ++ ", after: " ++ show stacksize') 
+      else return []
   assemble (SDeclaration tp ds) = intercalate "\n" `fmap` mapM declare ds
     where
       declare :: Declaration -> Jasmin Code
