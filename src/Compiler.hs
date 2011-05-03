@@ -211,7 +211,6 @@ declareVar name tp = do
     
     let scope' = Map.insert name (size, tp) scope
     modify (\state -> state { locals = (size + sizeof tp, (scope':scopes)) })
-    return []
   where
     sizeof TDouble  = 2
     sizeof _        = 1
@@ -262,8 +261,7 @@ instance Compileable Definition where
       writeArg (Arg t x) = type2str t
 
 instance Compileable Block where
-  assemble (Block code) = inScope $ do 
-    concat `fmap` mapM assemble code
+  assemble (Block code) = inScope $ mapM_ assemble code
 
 instance Compileable Statement where
   assemble (SEmpty) = emit ""
@@ -440,7 +438,7 @@ instance Compileable Expr where
     stackdec
     emit "ior"
   
-  assemble (ETyped tp (EVar name)) = fetchVar name
+  assemble (ETyped tp (EVar name)) = void (fetchVar name)
   assemble e = error $ "Non-compilable expression: " ++ show e
 
 ---
