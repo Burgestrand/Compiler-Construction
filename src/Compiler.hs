@@ -418,6 +418,7 @@ instance Compileable Expr where
     putlabel lab_t
     push (EBool LTrue)
     putlabel lab_f
+    stackdec TBool
   assemble (ETyped TBool (ERel e1 op e2)) = do
     lab_t <- getlabel
     lab_f <- getlabel
