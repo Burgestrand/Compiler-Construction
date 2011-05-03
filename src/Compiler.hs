@@ -191,6 +191,10 @@ pop _       = do
 TDouble +> code = emit ("d" ++ code)
 _       +> code = emit ("i" ++ code)
 
+-- | Add `N` to local variable `M`
+iinc :: Int -> Int -> Jasmin ()
+iinc i n = TInt +> ("inc " ++ show i ++ " " ++ show n)
+
 -- | Fetch a local variable by putting it on the stack.
 fetchVar :: Ident -> Jasmin Type
 fetchVar name = do
