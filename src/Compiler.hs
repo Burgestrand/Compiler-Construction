@@ -196,12 +196,12 @@ iinc :: Int -> Int -> Jasmin ()
 iinc i n = TInt +> ("inc " ++ show i ++ " " ++ show n)
 
 -- | Fetch a local variable by putting it on the stack.
-fetchVar :: Ident -> Jasmin Type
+fetchVar :: Ident -> Jasmin (Int, Type)
 fetchVar name = do
     (i, tp) <- (find name . snd) `fmap` gets locals
     stackinc
     load tp (show i)
-    return tp
+    return (i, tp)
   where
     find id (x:xs) | Map.member id x = (Map.!) x id
                    | otherwise       = find id xs
