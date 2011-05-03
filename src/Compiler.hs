@@ -172,6 +172,9 @@ neg :: Type -> Jasmin Code
 neg TDouble = emit "dneg"
 neg TInt    = emit "ineg"
 
+-- | Emits a nop nop!
+nop = emit "nop"
+
 -- | Fetch a local variable by putting it on the stack.
 fetchVar :: Ident -> Jasmin Code
 fetchVar name = do
@@ -258,7 +261,7 @@ instance Compileable Statement where
     goto_if_zero skiplabel
     assemble s
     putlabel skiplabel
-    emit "nop"
+    nop
     
   assemble (SIfElse (ETyped _ (EBool LTrue))  s1 _) = assemble s1
   assemble (SIfElse (ETyped _ (EBool LFalse)) _ s2) = assemble s2
@@ -272,7 +275,7 @@ instance Compileable Statement where
     putlabel elselabel
     assemble s2
     putlabel endlabel
-    emit "nop"
+    nop
     
   assemble (SWhile e s) = do
     testlabel <- getlabel
@@ -283,7 +286,7 @@ instance Compileable Statement where
     assemble s
     goto testlabel
     putlabel endlabel
-    emit "nop"
+    nop
   assemble (SInc id) = do
     fetchVar id
     push (EInt 1)
