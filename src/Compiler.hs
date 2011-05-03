@@ -262,12 +262,11 @@ instance Compileable Definition where
     
       directive "method" (signature ++ "(" ++ args' ++ ")" ++ type2str returns)
       pass $ do
-        case code of
-          (Block []) -> jreturn TVoid
-          _          -> assemble code
+        assemble code
         (_, stack) <- gets stack
         locals <- fst `fmap` gets locals
         return ((), (\code -> limits stack locals:indent code))
+      when (returns == TVoid) $ jreturn TVoid
       directive "end" "method"
     where
       indent xs = map ("  " ++) xs
