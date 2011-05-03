@@ -90,13 +90,21 @@ stackmod fn = do
   stack <- (fn . stack) `fmap` get
   modify (\state -> state { stack = stack })
 
--- | Increase the stack size, returning the new Stack.
-stackinc :: Jasmin ()
-stackinc = stackmod (\(x, y) -> (x + 1, max (x + 1) y))
+-- | Increase the stack size, depending on type.
+stackinc :: Type -> Jasmin ()
+stackinc tp = stackmod (\(x, y) -> (x + size, max (x + size) y))
+  where size = case tp of
+                 TDouble -> 2
+                 TVoid   -> 0
+                 _       -> 1
 
--- | Decrease the stack size, returnin gthe new Stack.
-stackdec :: Jasmin ()
-stackdec = stackmod (\(x, y) -> (x - 1, y))
+-- | Decrease the stack size, depending on type.
+stackdec :: Type -> Jasmin ()
+stackdec tp = stackmod (\(x, y) -> (x - size, y))
+  where size = case tp of
+                 TDouble -> 2
+                 TVoid   -> 0
+                 _       -> 1
 
 -- | Generating a new unique label, returning that label
 getlabel :: Jasmin Code
@@ -114,26 +122,25 @@ directive name args = emit ("." ++ name ++ " " ++ args)
 -- | Push an expression constant, also modifying the stack.
 push :: Expr -> Jasmin ()
 push expr = do
-    let value = case expr of
-                (EInt x)    -> show x
-                (EDouble x) -> show x
-                (EString x) -> show x
-                (EBool LTrue)  -> "1"
-                (EBool LFalse) -> "0"
+    let (value, tp) = case expr of
+                (EInt x)    -> (show x, TInt)
+                (EDouble x) -> (show x, TDouble)
+                (EString x) -> (show x, TInt) -- Ugly hack
+                (EBool LTrue)  -> ("1", TBool)
+                (EBool LFalse) -> ("0", TBool)
     
     fn <- if is_double expr
-          then stackinc >> return "ldc2_w "
+          then return "ldc2_w "
           else return "ldc "
     
-    stackinc
+    stackinc tp
     emit $ fn ++ value
 
 -- | Call a static function: name, args, returns
 call :: String -> [Expr] -> Type -> Jasmin ()
 call func targs returns = do
-    mapM (const stackdec) targs               -- decrease stack once for each arg
-    unless (returns == TVoid)   (void stackinc) -- increase stack once for return type
-    when   (returns == TDouble) (void stackinc) -- increase stack once again for doubles
+    mapM (\(ETyped t _) -> stackdec t) targs -- decrease stack once for each arg
+    stackinc returns -- increase stack for return type
   
     klass <- if builtin func then return "Runtime" else gets name
     let args = intercalate "," (map type_of targs)
@@ -180,11 +187,10 @@ nop = emit "nop"
 pop :: Type -> Jasmin ()
 pop TVoid   = emit ""
 pop TDouble = do
-  stackdec
-  stackdec
+  stackdec TDouble
   emit "pop2"
-pop _       = do
-  stackdec
+pop tp      = do
+  stackdec tp
   emit "pop"
 
 (+>) :: Type -> Code -> Jasmin ()
@@ -209,11 +215,8 @@ findVar id = find `fmap` snd `fmap` gets locals
 fetchVar :: Ident -> Jasmin ()
 fetchVar name = do
     (i, tp) <- findVar name
-    stackinc
-    load tp (show i)
-  where
-    load TDouble i = stackinc >> emit ("dload " ++ i)
-    load _       i = emit ("iload " ++ i)
+    stackinc tp
+    tp +> "load " ++ (show i)
 
 -- | Declares a new variable in the current scope
 declareVar :: Ident -> Type -> Jasmin ()
@@ -231,13 +234,11 @@ storeVar :: Ident -> Jasmin ()
 storeVar name = do
     (i, tp) <- (find name . snd) `fmap` gets locals
     
-    stackdec
-    store tp (show i)
+    stackdec tp
+    emit ("istore " ++ (show i))
   where
     find id (x:xs) | Map.member id x = (Map.!) x id
                    | otherwise       = find id xs
-    store TDouble i = stackdec >> emit ("dstore " ++ i)
-    store _       i = emit ("istore " ++ i)
 
 inScope :: Jasmin a -> Jasmin a
 inScope f = do
@@ -310,7 +311,7 @@ instance Compileable Statement where
     goto testlabel
     putlabel endlabel
     nop
-  
+    
   assemble (SInc id) = iinc id 1
   assemble (SDec id) = iinc id (-1)
   
@@ -370,7 +371,7 @@ instance Compileable Expr where
   assemble (ETyped tp (EMul e1 op e2)) = do
     assemble e1
     assemble e2
-    stackdec
+    stackdec tp
     emit $ (case tp of
       TInt    -> "i"
       TDouble -> "d") ++ (case op of
@@ -380,7 +381,7 @@ instance Compileable Expr where
   assemble (ETyped tp (EAdd e1 op e2)) = do
     assemble e1
     assemble e2
-    stackdec
+    stackdec tp
     emit $ (case tp of
       TInt    -> "i"
       TDouble -> "d") ++ (case op of
@@ -393,12 +394,11 @@ instance Compileable Expr where
     assemble e2
     let (ETyped tp _) = e1
     tp +> "sub"
-    -- TODO: stackdec tp
-    stackdec
+    stackdec tp
     emit $ (case op of
       EQU -> "ifeq " 
       NE  -> "ifne ")++ lab_t
-    stackdec
+    stackdec tp
     push (EBool LFalse)
     goto lab_f
     putlabel lab_t
@@ -411,14 +411,13 @@ instance Compileable Expr where
     assemble e2
     let (ETyped tp _) = e1
     tp +> "sub"
-    -- TODO: stackdec tp
-    stackdec
+    stackdec tp
     emit $ (case op of
       LTH -> "iflt "
       LE  -> "ifle "
       GTH -> "ifgt "
       GE  -> "ifge ") ++ lab_t
-    stackdec
+    stackdec tp
     push (EBool LFalse)
     goto lab_f
     putlabel lab_t
@@ -427,12 +426,12 @@ instance Compileable Expr where
   assemble (ETyped TBool (EAnd e1 e2)) = do
     assemble e1
     assemble e2
-    stackdec
+    stackdec TBool
     emit "iand"
   assemble (ETyped TBool (EOr e1 e2)) = do
     assemble e1
     assemble e2
-    stackdec
+    stackdec TBool
     emit "ior"
   
   assemble (ETyped tp (EVar name)) = void (fetchVar name)
