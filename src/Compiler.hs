@@ -326,10 +326,7 @@ instance Compileable Statement where
   assemble (SExpr e@(ETyped tp _)) = do
     (stacksize, _) <- gets stack
     assemble e
-    case tp of
-      TVoid   -> emit ""
-      TDouble -> emit "pop2"
-      _       -> emit "pop"
+    pop tp
     
     (stacksize', _) <- gets stack
     if (stacksize /= stacksize') 
