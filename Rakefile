@@ -19,16 +19,7 @@ end
 
 desc "Test the code in a very budget way!"
 task :luffartest => :compile do
-  result = system [
-    'cd src',
-    "runghc jlc.hs '#{SOURCE}' > '#{TARGET}'",
-    %Q{java -jar ../lib/jasmin.jar -d ../bin '#{TARGET}'},
-    "cd ../bin",
-    "java #{File.basename(SOURCE, ".jl").capitalize}",
-  ].join(" && ")
-  
-  puts
-  puts "Result: #{result}"
+  puts "Result: #{system './bin/jlc code.jl'}"
 end
 
 desc "Compile the JLC compiler and put it in bin/"
