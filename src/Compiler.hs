@@ -331,22 +331,21 @@ instance Compileable Statement where
     (stacksize', _) <- gets stack
     when (stacksize /= stacksize') (fail $ "Incorrect stack size in expr " ++ show e ++ " before: " ++ show stacksize ++ ", after: " ++ show stacksize') 
     
-  assemble (SDeclaration tp ds) = mapM assemble ds
+  assemble (SDeclaration tp ds) = mapM_ declare ds
+    where
+      declare (DInit name e@(ETyped tp _)) = do 
+          declareVar name tp 
+          assemble e 
+          storeVar name
+      declare (DNoInit name) = do
+          declareVar name tp
+          push (initial tp) 
+          storeVar name
+        where
+          initial TDouble = (EDouble 0)
+          initial _       = (EInt 0)
   
   assemble e = error $ "Non-compilable statement: " ++ show e
-  
-instance Compileable Declaration where
-  assemble (DInit name e@(ETyped tp _)) = do 
-    declareVar name tp 
-    assemble e 
-    storeVar name
-  assemble (DNoInit name) = do
-      declareVar name tp
-      push (initial tp) 
-      storeVar name
-    where
-      initial TDouble = (EDouble 0)
-      initial _       = (EInt 0)
 
 instance Compileable Expr where
   assemble e | is_literal e = push e
