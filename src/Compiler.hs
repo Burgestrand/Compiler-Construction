@@ -265,9 +265,9 @@ instance Compileable Block where
   assemble (Block code) = inScope $ mapM_ assemble code
 
 instance Compileable Statement where
-  assemble (SEmpty) = emit ""
+  assemble (SEmpty) = nop
+  assemble (SIf (ETyped _ (EBool LFalse)) _) = nop
   assemble (SIf (ETyped _ (EBool LTrue))  s) = assemble s
-  assemble (SIf (ETyped _ (EBool LFalse)) _) = emit ""
   assemble (SIf e s) = do
     skiplabel <- getlabel
     assemble e
