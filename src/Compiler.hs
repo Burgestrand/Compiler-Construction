@@ -187,8 +187,9 @@ pop _       = do
   stackdec
   emit "pop"
 
-op TDouble code = emit ("d" ++ code)
-op _       code = emit ("i" ++ code)
+(+>) :: Type -> Code -> Jasmin ()
+TDouble +> code = emit ("d" ++ code)
+_       +> code = emit ("i" ++ code)
 
 -- | Fetch a local variable by putting it on the stack.
 fetchVar :: Ident -> Jasmin Type
