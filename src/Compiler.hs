@@ -412,9 +412,8 @@ instance Compileable Expr where
     assemble e1
     assemble e2
     let (ETyped tp _) = e1
-    emit $ (case tp of
-      TInt    -> "i"
-      TDouble -> "d") ++ "sub"
+    tp +> "sub"
+    -- TODO: stackdec tp
     stackdec
     emit $ (case op of
       LTH -> "iflt "
