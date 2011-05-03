@@ -172,8 +172,8 @@ neg :: Type -> Jasmin ()
 neg TDouble = emit "dneg"
 neg TInt    = emit "ineg"
 
-
 -- | Emits a nop nop!
+nop :: Jasmin ()
 nop = emit "nop"
 
 -- | Pop a thingy of type Type off the stack
