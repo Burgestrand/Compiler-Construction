@@ -365,11 +365,13 @@ instance Compileable Expr where
     lab_f <- getlabel
     assemble e
     emit $ "ifne " ++ lab_t
-    push (EBool LFalse)
+    stackdec TBool
+    push (EBool LTrue)
     goto lab_f
     putlabel lab_t
-    push (EBool LTrue)
-    putlabel lab_f    
+    push (EBool LFalse)
+    putlabel lab_f  
+    stackdec TBool  
   assemble (ETyped tp (EMul e1 op e2)) = do
     assemble e1
     assemble e2
