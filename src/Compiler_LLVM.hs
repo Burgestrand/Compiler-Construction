@@ -21,16 +21,20 @@ type LLVM = StateT Compilation (Writer (Map Label BasicBlock))
 
 type Lines = [Code]
 type Code  = String
-data Compilation = Compilation {
-  -- | Class name
-  name :: String,
-  
+data Compilation = Compilation { 
   -- | Lists all locals
   locals :: [Ident],
   
-  -- | Label counter
-  label :: Integer
+  -- | Label and temp counter
+  count :: Integer,
   
-  -- | Temp variable counter
-  temp :: Integer
+  -- | Global, duh
+  globals :: Map String Ident
 }
+
+class Compileable x where
+  assemble :: x -> LLVM ()
+
+--
+
+
