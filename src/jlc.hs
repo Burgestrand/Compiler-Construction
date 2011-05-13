@@ -3,7 +3,7 @@ module Main where
 import ErrM
 import Parser
 import TypeChecker
-import Compiler.JVM
+import Compiler.Bogus
 
 import Control.Monad
 import Data.Char (toUpper)
@@ -33,6 +33,10 @@ parselex = pProgram . myLexer
 jasmin :: String -> IO ExitCode
 jasmin source = rawSystem "java" ["-jar", "lib/jasmin.jar", "-d", takeDirectory source, source]
 
+-- | Generate bytecode from LLVM source.
+llvm :: String -> IO ExitCode
+llvm source = rawSystem "llvm-as" ["-d", takeDirectory source, source]
+
 main :: IO ()
 main = do
     args <- getArgs
@@ -53,7 +57,7 @@ main = do
           (Ok source) -> do
             info "OK"
             writeFile target source   -- write assembled code
-            compiled <- jasmin target -- compile assembled code
+            compiled <- llvm target -- compile assembled code
             case compiled of
               (ExitFailure n) -> fatal $ "Compilation failed with exit code " ++ (show n)
               _               -> return ()
