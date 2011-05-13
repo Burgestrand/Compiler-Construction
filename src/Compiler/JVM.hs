@@ -1,4 +1,4 @@
-module Compiler (compile) where
+module Compiler.JVM (compile) where
 
 import AST
 
