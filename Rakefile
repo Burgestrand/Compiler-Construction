@@ -27,9 +27,10 @@ task :compile do
   system 'mkdir -p bin'
   
   system 'javac -d ./lib src/Runtime.java'
+  system 'llvm-as -o lib/runtime.bc src/Runtime.ll'
   
   Dir.chdir 'src' do
-    system 'ghc --make jlc.hs && mv ./jlc ../bin/'
+    system 'make && cp -f ../jlc ../bin'
   end
   
   Dir.chdir 'tester' do
@@ -46,7 +47,7 @@ task :test => :compile do
       'cp ../bin/jlc .',
       'cp -r ../lib .',
       'cp ../bin/Grade .',
-      './Grade -b JVM ../tester/ .'
+      './Grade -b LLVM ../tester/ .'
     ].join(" && ")
   end
 end

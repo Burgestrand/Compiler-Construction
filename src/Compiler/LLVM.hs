@@ -1,4 +1,4 @@
-module Compiler (compile) where
+module Compiler.LLVM (compile) where
 
 import AST
 
