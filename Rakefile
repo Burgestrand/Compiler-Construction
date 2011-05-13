@@ -24,9 +24,9 @@ end
 
 desc "Compile the JLC compiler and put it in bin/"
 task :compile do
-  system 'javac -d ./bin src/Runtime.java'
-  
   system 'mkdir -p bin'
+  
+  system 'javac -d ./bin src/Runtime.java'
   
   Dir.chdir 'src' do
     system 'ghc --make jlc.hs && mv ./jlc ../bin/'
