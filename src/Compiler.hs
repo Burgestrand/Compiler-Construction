@@ -143,7 +143,7 @@ call func targs returns = do
     stackinc returns -- increase stack for return type
   
     klass <- if builtin func then return "Runtime" else gets name
-    let args = intercalate "," (map type_of targs)
+    let args = concatMap type_of targs
     let name = klass ++ "/" ++ func
     emit $ "invokestatic " ++ name ++ "(" ++ args ++ ")" ++ type2str returns
   where
@@ -268,7 +268,7 @@ inScope f = do
 instance Compileable Definition where
   assemble (Definition returns (Ident name) args code) = do
       mapM declareArg args
-      let args' = intercalate "," $ map writeArg args
+      let args' = concatMap writeArg args
       let signature  = "public static " ++ name
     
       directive "method" (signature ++ "(" ++ args' ++ ")" ++ type2str returns)
@@ -418,6 +418,7 @@ instance Compileable Expr where
     putlabel lab_t
     push (EBool LTrue)
     putlabel lab_f
+    stackdec TBool
   assemble (ETyped TBool (ERel e1 op e2)) = do
     lab_t <- getlabel
     lab_f <- getlabel

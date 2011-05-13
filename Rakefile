@@ -24,9 +24,9 @@ end
 
 desc "Compile the JLC compiler and put it in bin/"
 task :compile do
-  system 'javac -d ./bin src/Runtime.java'
-  
   system 'mkdir -p bin'
+  
+  system 'javac -d ./lib src/Runtime.java'
   
   Dir.chdir 'src' do
     system 'ghc --make jlc.hs && mv ./jlc ../bin/'
@@ -45,7 +45,6 @@ task :test => :compile do
     system [
       'cp ../bin/jlc .',
       'cp -r ../lib .',
-      'cp ../bin/Runtime.class ./lib',
       'cp ../bin/Grade .',
       './Grade -b JVM ../tester/ .'
     ].join(" && ")

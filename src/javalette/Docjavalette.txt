@@ -77,9 +77,9 @@ All other symbols are terminals.
   |  |  **|**  | ``if`` ``(`` //Expr// ``)`` //Statement// 
   |  |  **|**  | ``if`` ``(`` //Expr// ``)`` //Statement// ``else`` //Statement// 
   |  |  **|**  | ``while`` ``(`` //Expr// ``)`` //Statement// 
-  |  |  **|**  | //Ident// ``++`` 
-  |  |  **|**  | //Ident// ``--`` 
-  |  |  **|**  | //Ident// ``=`` //Expr// 
+  |  |  **|**  | //Ident// ``++`` ``;`` 
+  |  |  **|**  | //Ident// ``--`` ``;`` 
+  |  |  **|**  | //Ident// ``=`` //Expr// ``;`` 
   |  |  **|**  | //Expr// ``;`` 
   | //Declaration// | -> | //Ident// 
   |  |  **|**  | //Ident// ``=`` //Expr// 
