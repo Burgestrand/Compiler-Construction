@@ -35,7 +35,7 @@ jasmin source = rawSystem "java" ["-jar", "lib/jasmin.jar", "-d", takeDirectory 
 
 -- | Generate bytecode from LLVM source.
 llvm :: String -> IO ExitCode
-llvm source = rawSystem "llvm-as" ["-d", takeDirectory source, source]
+llvm source = rawSystem "llvm-as" [source]
 
 main :: IO ()
 main = do
@@ -43,7 +43,7 @@ main = do
     case args of
       [file] -> do
         let name   = dropExtensions (takeBaseName file)
-        target  <- canonicalizePath (dropExtensions file ++ ".j")
+        target  <- canonicalizePath (dropExtensions file ++ ".ll")
         source  <- readFile file
         program <- return $ do
           program <- parselex source
