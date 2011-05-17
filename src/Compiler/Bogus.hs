@@ -1,21 +1,28 @@
+{-# LANGUAGE CPP #-}
 module Compiler.Bogus (compile) where
 
+import AST
+import Directory
+import System.FilePath (combine)
 import System.IO.Unsafe
 
-compile :: String
-compile = unsafePerformIO bogus
-
-bogus :: IO String
-bogus = do
-  source <- lines `fmap` readFile "./Bogus.hs"
-  let code = dropWhile (/= "{-") source
-  let code' = takeWhile (/= "-}") (tail code)
-  return (unlines code')
-
-{-
-define i32 main()
-{
-entry:
-  ret i32 1
-}
--}
+compile :: String -> Program -> String
+compile name program = unlines
+  ["declare void @printString(i8*)",
+   "",
+   "@g_1 = internal constant [13 x i8] c\"hello world\\0A\\00\"",
+   "",
+   "define i32 @main()",
+   "{",
+   "entry:",
+   "  call void @foo()",
+   "  ret i32 0",
+   "}",
+   "",
+   "define void @foo()",
+   "{",
+   "entry:",
+   "  %l_1 = getelementptr [ 13 x i8 ]* @g_1, i32 0, i32 0",
+   "  call void @printString(i8* %l_1)",
+   "  ret void",
+   "}"]
