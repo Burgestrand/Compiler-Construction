@@ -45,10 +45,16 @@ type_of TVoid = "void"
 -- | Emit a line of LLVM assembly
 emit x = tell [x]
 
--- | Emit a label with a given name
-label name = emit (name ++ ":")
+-- | Emit a bit of code iff it's possible
+emitCode x = do
+  lp <- labelPlaced `fmap` get
+  when lp (emit x)
 
--- Low level stuff
+-- | Emit a label with a given name
+label name = do
+  -- goto name
+  emit (name ++ ":")
+  modify (\state -> state { labelPlaced = True })
 
 class Compileable x where
   assemble :: x -> LLVM ()
