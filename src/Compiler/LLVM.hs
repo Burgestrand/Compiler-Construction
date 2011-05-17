@@ -74,9 +74,14 @@ instance Compileable Statement where
 --
 
 compile :: String -> Program -> Code
-compile _ (Program fs) = header ++ functions
-  where header = unlines [] ++ "\n"
-        functions = intercalate "\n\n" (map compiler fs)
+compile _ (Program fs) = header ++ "\n\n" ++ functions
+  where functions = intercalate "\n\n" (map compiler fs)
+        header = unlines 
+          ["declare void @printString(i8*)",
+           "declare void @printInt(i32)",
+           "declare void @printDouble(double)",
+           "declare i32 @readInt()",
+           "declare double @readDouble()"]
         
 compiler :: (Compileable x) => x -> Code
 compiler x = intercalate "\n" $ execWriter $ runStateT (assemble x) state
