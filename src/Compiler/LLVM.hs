@@ -34,7 +34,10 @@ data Compilation = Compilation {
 class Compileable x where
   assemble :: x -> LLVM ()
 
---
+-- Low level stuff
+
+emit :: Code -> LLVM ()
+emit x = tell [x]
 
 -- putLabel - set labelPlaced
 
