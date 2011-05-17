@@ -60,6 +60,22 @@ putlabel name = do
 goto name = do
   emitCode ("br " ++ name)
   modify (\state -> state { labelPlaced = False })
+  
+-- | Generates a new number (for labels, vars or other fun stuff (where fun = consecutive)) 
+getFun = do
+  fun <- gets count
+  modify (\state -> state { count = fun + 1 }) -- Even more fun!
+  return fun
+   
+-- | Generates a temp var and sets it to the arg
+push x = do
+  num <- getFun
+  emitCode ("%" ++ show num ++ " = " ++ x)
+  
+-- | Remembers the last fun value
+bookmark = do
+  num <- gets count
+  return (num - 1)
 
 class Compileable x where
   assemble :: x -> LLVM ()
