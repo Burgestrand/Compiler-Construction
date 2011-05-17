@@ -73,6 +73,7 @@ push t x = do
   emitCode ("%" ++ show num ++ " = " ++ (type_of t) ++ " " ++ x)
   
 -- | Remembers the last fun value
+bookmark :: LLVM Integer
 bookmark = do
   num <- gets count
   return (num - 1)
@@ -88,7 +89,7 @@ instance Compileable Definition where
     
     emit $ "define " ++ llvm_returns ++ " @" ++ llvm_name ++ "()"
     emit "{"
-    label "entry"
+    putlabel "entry"
     assemble code
     emit "}"
 
