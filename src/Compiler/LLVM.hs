@@ -68,9 +68,9 @@ getFun = do
   return fun
    
 -- | Generates a temp var and sets it to the arg
-push x = do
+push t x = do
   num <- getFun
-  emitCode ("%" ++ show num ++ " = " ++ x)
+  emitCode ("%" ++ show num ++ " = " ++ (type_of t) ++ " " ++ x)
   
 -- | Remembers the last fun value
 bookmark = do
@@ -100,7 +100,7 @@ instance Compileable Statement where
   assemble (SExpr e)  = assemble e
   
 instance Compileable Expr where
-  assemble (ETyped TInt (EInt i)) = push (show i)
+  assemble (ETyped t (EInt i)) = push t (show i)
 
 --
 
