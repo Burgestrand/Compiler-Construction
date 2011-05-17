@@ -50,9 +50,6 @@ label name = emit (name ++ ":")
 
 -- Low level stuff
 
-emit :: Code -> LLVM ()
-emit x = tell [x]
-
 class Compileable x where
   assemble :: x -> LLVM ()
 
