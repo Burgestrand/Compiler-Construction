@@ -25,18 +25,45 @@ data Compilation = Compilation {
   count :: Integer,
   
   -- | Global, duh
-  globals :: Map String Ident
+  globals :: Map String Ident,
   
   -- | Can generate code?
   labelPlaced :: Bool
 }
 
-class Compileable x where
-  assemble :: x -> LLVM ()
+--
+
+-- | Emit a line of LLVM assembly
+emit :: (MonadWriter [t] m) => t -> m ()
+emit x = tell [x]
+
+-- | Emit a label with a given name
+label name = emit (name ++ ":")
 
 --
 
--- putLabel - set labelPlaced
+class Compileable x where
+  assemble :: x -> LLVM ()
+
+instance Compileable Definition where
+  assemble (Definition returns (Ident name) args code) = do
+    let llvm_returns = type_of returns
+    let llvm_name = name
+    let llvm_args = args
+    
+    emit "define " ++ llvm_returns ++ " @" ++ llvm_name ++ "()"
+    emit "{"
+    emit 
+    
+    emit "}"
+
+instance Compileable Block where
+  assemble (Block code) = undefined
+  
+instance Compileable Statement where
+  assemble (SEmpty) = undefined
+
+--
 
 compile :: String -> Program -> Code
 compile (Program fs) = header ++ functions
@@ -46,17 +73,3 @@ compile (Program fs) = header ++ functions
 compiler :: (Compileable x) => String -> x -> Code
 compiler x = intercalate "\n" $ execWriter $ runStateT (assemble x) state
   where state = Compilation [] 0 Map.empty False
-  
-instance Compileable Definition where
-  assemble (Definition returns (Ident name) args code) = do
-      --TODO
-      pass $ do
-        -- label entry
-        assemble code
-        jreturn TVoid
-
-instance Compileable Block where
-  assemble (Block code) = undefined
-  
-instance Compileable Statement where
-  assemble (SEmpty) = undefined
