@@ -47,12 +47,12 @@ emit x = tell [x]
 
 -- | Emit a bit of code iff it's possible
 emitCode x = do
-  lp <- labelPlaced `fmap` get
+  lp <- gets labelPlaced
   when lp (emit x)
 
 -- | Emit a label with a given name, jumping to it if nececery
 putlabel name = do
-  -- goto name
+  goto name
   emit (name ++ ":")
   modify (\state -> state { labelPlaced = True })
   
@@ -81,6 +81,9 @@ instance Compileable Block where
   
 instance Compileable Statement where
   assemble (SEmpty) = undefined
+  
+instance Compileable Expr where
+  assemble (EInt) = undefined
 
 --
 
