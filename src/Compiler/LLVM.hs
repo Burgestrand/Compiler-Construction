@@ -50,11 +50,16 @@ emitCode x = do
   lp <- labelPlaced `fmap` get
   when lp (emit x)
 
--- | Emit a label with a given name
-label name = do
+-- | Emit a label with a given name, jumping to it if nececery
+putlabel name = do
   -- goto name
   emit (name ++ ":")
   modify (\state -> state { labelPlaced = True })
+  
+-- | Branch to a label
+goto name = do
+  emitCode ("br " ++ name)
+  modify (\state -> state { labelPlaced = False })
 
 class Compileable x where
   assemble :: x -> LLVM ()
