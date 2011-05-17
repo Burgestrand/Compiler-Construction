@@ -4,7 +4,7 @@ TARGET = SOURCE.gsub(/\.jl\z/, '.j')
 desc "Recompile the grammar and make the proper adjustments"
 task :grammarcompile do
   Dir.chdir 'src/javalette' do
-    system <<-BASH
+    sh <<-BASH
       bnfc javalette.cf;
       rm *.bak;
       alex *.x;
@@ -19,31 +19,31 @@ end
 
 desc "Test the code in a very budget way!"
 task :luffartest => :compile do
-  puts "Result: #{system './bin/jlc code.jl'}"
+  puts "Result: #{sh './bin/jlc code.jl'}"
 end
 
 desc "Compile the JLC compiler and put it in bin/"
 task :compile do
-  system 'mkdir -p bin'
+  sh 'mkdir -p bin'
   
-  system 'javac -d ./lib src/Runtime.java'
-  system 'llvm-as -o lib/runtime.bc src/Runtime.ll'
+  sh 'javac -d ./lib src/Runtime.java'
+  sh 'llvm-as -o lib/runtime.bc src/Runtime.ll'
   
   Dir.chdir 'src' do
-    system 'make && cp -f ../jlc ../bin'
+    sh 'make && cp -f ../jlc ../bin'
   end
   
   Dir.chdir 'tester' do
-    system 'make && mv ./Grade ../bin/'
+    sh 'make && mv ./Grade ../bin/'
   end
 end
 
 desc "Test the implementation using the built-in testing thingies"
 task :test => :compile do
-  system 'rm -r tmp'
-  system 'mkdir tmp'
+  sh 'rm -r tmp'
+  sh 'mkdir tmp'
   Dir.chdir 'tmp' do
-    system [
+    sh [
       'cp ../bin/jlc .',
       'cp -r ../lib .',
       'cp ../bin/Grade .',
