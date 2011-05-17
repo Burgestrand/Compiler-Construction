@@ -48,7 +48,7 @@ emit x = tell [x]
 -- | Emit a label with a given name
 label name = emit (name ++ ":")
 
---
+-- Low level stuff
 
 class Compileable x where
   assemble :: x -> LLVM ()
