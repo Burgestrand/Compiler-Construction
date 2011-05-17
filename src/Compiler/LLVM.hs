@@ -31,10 +31,18 @@ data Compilation = Compilation {
   labelPlaced :: Bool
 }
 
---
+-- Code that does NOT emit stuff:
+
+-- | Given a Type, return an LLVM type
+type_of :: Type -> String
+type_of TInt = "i32"
+type_of TDouble = "double"
+type_of TBool = "i1"
+type_of TVoid = "void"
+
+-- Code that DOES emit stuff:
 
 -- | Emit a line of LLVM assembly
-emit :: (MonadWriter [t] m) => t -> m ()
 emit x = tell [x]
 
 -- | Emit a label with a given name
