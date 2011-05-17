@@ -97,9 +97,10 @@ instance Compileable Block where
   
 instance Compileable Statement where
   assemble (SEmpty) = undefined
+  assemble (SExpr e)  = assemble e
   
 instance Compileable Expr where
-  assemble (EInt) = undefined
+  assemble (ETyped TInt (EInt i)) = push (show i)
 
 --
 
