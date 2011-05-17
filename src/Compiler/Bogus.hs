@@ -10,7 +10,7 @@ compile :: String -> Program -> String
 compile name program = unlines
   ["declare void @printString(i8*)",
    "",
-   "@g_1 = internal constant [13 x i8] c\"hello world\\0A\\00\"",
+   "@g_1 = internal constant [13 x i8] c\"foo\\0A\\00\"",
    "",
    "define i32 @main()",
    "{",
