@@ -3,7 +3,7 @@ module Main where
 import ErrM
 import Parser
 import TypeChecker
-import Compiler.Bogus
+import Compiler.LLVM
 
 import Control.Monad
 import Data.Char (toUpper)
