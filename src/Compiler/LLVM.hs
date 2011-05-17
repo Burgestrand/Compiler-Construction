@@ -13,11 +13,7 @@ import Data.Maybe
 
 --
 
-data BasicBlock = Returning   Lines 
-                | Jumping     Lines Label 
-                | Conditional Lines Label Label
-
-type LLVM = StateT Compilation (Writer (Map Label BasicBlock))
+type LLVM = StateT Compilation (Writer Lines)
 
 type Lines = [Code]
 type Code  = String
@@ -30,6 +26,9 @@ data Compilation = Compilation {
   
   -- | Global, duh
   globals :: Map String Ident
+  
+  -- | Can generate code?
+  labelPlaced :: Bool
 }
 
 class Compileable x where
