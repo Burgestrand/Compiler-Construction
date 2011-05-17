@@ -53,7 +53,7 @@ instance Compileable Definition where
     
     emit "define " ++ llvm_returns ++ " @" ++ llvm_name ++ "()"
     emit "{"
-    emit 
+    label "entry"
     
     emit "}"
 
