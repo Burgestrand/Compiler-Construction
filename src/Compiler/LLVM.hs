@@ -53,14 +53,8 @@ label name = emit (name ++ ":")
 emit :: Code -> LLVM ()
 emit x = tell [x]
 
-<<<<<<< Updated upstream
 class Compileable x where
   assemble :: x -> LLVM ()
-=======
-emitCode x = 
-
--- putLabel - set labelPlaced
->>>>>>> Stashed changes
 
 instance Compileable Definition where
   assemble (Definition returns (Ident name) args code) = do
