@@ -31,7 +31,7 @@ data Compilation = Compilation {
   labelPlaced :: Bool
 }
 
--- Code that does NOT emit stuff:
+-- Code that does NOT emit stuff and is independent from LLVM:
 
 -- | Given a Type, return an LLVM type
 type_of :: Type -> String
@@ -62,10 +62,11 @@ instance Compileable Definition where
     emit $ "define " ++ llvm_returns ++ " @" ++ llvm_name ++ "()"
     emit "{"
     label "entry"
+    assemble code
     emit "}"
 
 instance Compileable Block where
-  assemble (Block code) = undefined
+  assemble (Block code) = emit "*code*"
   
 instance Compileable Statement where
   assemble (SEmpty) = undefined

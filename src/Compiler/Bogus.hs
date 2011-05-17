@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 module Compiler.Bogus (compile) where
 
 import AST
