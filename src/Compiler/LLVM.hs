@@ -18,6 +18,9 @@ type LLVM = StateT Compilation (Writer Lines)
 type Lines = [Code]
 type Code  = String
 data Compilation = Compilation { 
+  -- | Name of the function (gives us function-local globals)
+  function :: String,
+
   -- | Lists all locals
   locals :: [Ident],
   
@@ -25,7 +28,7 @@ data Compilation = Compilation {
   count :: Integer,
   
   -- | Global, duh
-  globals :: Map String Ident,
+  globals :: [String],
   
   -- | Can generate code?
   labelPlaced :: Bool
@@ -39,6 +42,22 @@ type_of TInt = "i32"
 type_of TDouble = "double"
 type_of TBool = "i1"
 type_of TVoid = "void"
+
+-- | Retrieve the name of a global by a given number
+
+-- Code that DOES NOT emit stuff, but is dependent on LLVM:
+
+-- | Given an integer, return the name of the global variable
+g_name int = do
+  func <- gets function
+  return $ intercalate "_" ["@g", func, show int]
+
+-- | Create a global and return its’ (complete) name
+g_create string = do
+  count <- length `fmap` gets globals
+  new_globals <- (++ [string]) `fmap` gets globals
+  modify (\state -> state { globals = new_globals })
+  g_name count
 
 -- Code that DOES emit stuff:
 
@@ -83,15 +102,28 @@ class Compileable x where
 
 instance Compileable Definition where
   assemble (Definition returns (Ident name) args code) = do
-    let llvm_returns = type_of returns
-    let llvm_name = name
-    let llvm_args = args
-    
-    emit $ "define " ++ llvm_returns ++ " @" ++ llvm_name ++ "()"
-    emit "{"
-    putlabel "entry"
-    assemble code
-    emit "}"
+      -- Add this functions’ name to the global state:
+      modify (\state -> state { function = name })
+      
+      let llvm_returns = type_of returns
+      let llvm_name = "f_" ++ name
+      let llvm_args = args
+      pass $ do
+        emit $ "define " ++ llvm_returns ++ " @" ++ llvm_name ++ "()"
+        emit "{"
+        label "entry"
+        name <- g_create "coolio"
+        emit "}"
+        
+        globals <- gets globals
+        names   <- mapM g_name [0..length globals]
+        let declarations = intercalate "\n" $ map g_declare (zip globals names)
+        return ((), (declarations:))
+      
+      emit ""
+    where
+      g_declare (str, name) = concat
+        [name, " = internal constant[", show (length str + 1), " x i8] c\"", str ,"\\00\""]
 
 instance Compileable Block where
   assemble (Block code) = emit "*code*"
@@ -117,4 +149,4 @@ compile _ (Program fs) = header ++ "\n\n" ++ functions
         
 compiler :: (Compileable x) => x -> Code
 compiler x = intercalate "\n" $ execWriter $ runStateT (assemble x) state
-  where state = Compilation [] 0 Map.empty False
+  where state = Compilation undefined [] 0 [] False
