@@ -31,10 +31,18 @@ data Compilation = Compilation {
   labelPlaced :: Bool
 }
 
---
+-- Code that does NOT emit stuff:
+
+-- | Given a Type, return an LLVM type
+type_of :: Type -> String
+type_of TInt = "i32"
+type_of TDouble = "double"
+type_of TBool = "i1"
+type_of TVoid = "void"
+
+-- Code that DOES emit stuff:
 
 -- | Emit a line of LLVM assembly
-emit :: (MonadWriter [t] m) => t -> m ()
 emit x = tell [x]
 
 -- | Emit a label with a given name
@@ -60,10 +68,9 @@ instance Compileable Definition where
     let llvm_name = name
     let llvm_args = args
     
-    emit "define " ++ llvm_returns ++ " @" ++ llvm_name ++ "()"
+    emit $ "define " ++ llvm_returns ++ " @" ++ llvm_name ++ "()"
     emit "{"
     label "entry"
-    
     emit "}"
 
 instance Compileable Block where
@@ -75,10 +82,10 @@ instance Compileable Statement where
 --
 
 compile :: String -> Program -> Code
-compile (Program fs) = header ++ functions
+compile _ (Program fs) = header ++ functions
   where header = unlines [] ++ "\n"
         functions = intercalate "\n\n" (map compiler fs)
         
-compiler :: (Compileable x) => String -> x -> Code
+compiler :: (Compileable x) => x -> Code
 compiler x = intercalate "\n" $ execWriter $ runStateT (assemble x) state
   where state = Compilation [] 0 Map.empty False
