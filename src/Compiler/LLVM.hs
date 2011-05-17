@@ -59,10 +59,9 @@ instance Compileable Definition where
     let llvm_name = name
     let llvm_args = args
     
-    emit "define " ++ llvm_returns ++ " @" ++ llvm_name ++ "()"
+    emit $ "define " ++ llvm_returns ++ " @" ++ llvm_name ++ "()"
     emit "{"
     label "entry"
-    
     emit "}"
 
 instance Compileable Block where
@@ -74,10 +73,10 @@ instance Compileable Statement where
 --
 
 compile :: String -> Program -> Code
-compile (Program fs) = header ++ functions
+compile _ (Program fs) = header ++ functions
   where header = unlines [] ++ "\n"
         functions = intercalate "\n\n" (map compiler fs)
         
-compiler :: (Compileable x) => String -> x -> Code
+compiler :: (Compileable x) => x -> Code
 compiler x = intercalate "\n" $ execWriter $ runStateT (assemble x) state
   where state = Compilation [] 0 Map.empty False
