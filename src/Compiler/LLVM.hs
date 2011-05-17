@@ -36,4 +36,27 @@ class Compileable x where
 
 --
 
+-- putLabel - set labelPlaced
 
+compile :: String -> Program -> Code
+compile (Program fs) = header ++ functions
+  where header = unlines [] ++ "\n"
+        functions = intercalate "\n\n" (map compiler fs)
+        
+compiler :: (Compileable x) => String -> x -> Code
+compiler x = intercalate "\n" $ execWriter $ runStateT (assemble x) state
+  where state = Compilation [] 0 Map.empty False
+  
+instance Compileable Definition where
+  assemble (Definition returns (Ident name) args code) = do
+      --TODO
+      pass $ do
+        -- label entry
+        assemble code
+        jreturn TVoid
+
+instance Compileable Block where
+  assemble (Block code) = undefined
+  
+instance Compileable Statement where
+  assemble (SEmpty) = undefined
