@@ -22,5 +22,5 @@ The grammar has one shift-reduce problem; the dangling else problem.
 
 This submission is partial, and will be rejected automatically as it does
 not pass the grading tests (6/22). We haven’t implemented blocks, control
-flow statements, logical operators or comparisons. Reason is time — we
-run different courses with a nice schedule clash all over.
+flow statements, logical operators or comparisons. Reason is time (two
+project courses strains the schedule).
