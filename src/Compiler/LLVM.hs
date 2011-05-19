@@ -239,6 +239,12 @@ instance Compileable Statement where
   
   assemble (SDeclaration t vars) = mapM_ declare vars
     where
+      declare (DInit   ident e) = do
+          assemble e
+          val <- pull
+          ptr <- putIdent ident
+          alloca ptr t
+          store t ptr val
       declare (DNoInit ident) = do
           ptr <- putIdent ident
           alloca ptr t
