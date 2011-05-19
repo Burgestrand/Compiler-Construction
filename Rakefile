@@ -20,6 +20,7 @@ end
 desc "Test the code in a very budget way!"
 task :luffartest => :compile do
   puts "Result: #{sh './bin/jlc code.jl'}"
+  sh 'llvm-link lib/runtime.bc code.bc | lli'
 end
 
 desc "Compile the JLC compiler and put it in bin/"
