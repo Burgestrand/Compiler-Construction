@@ -41,14 +41,36 @@ False ? x = id
 
 -- Code that does NOT emit stuff and is independent from LLVM:
 
--- | Given a Type, return an LLVM type
-type_of :: Type -> String
-type_of TInt = "i32"
-type_of TDouble = "double"
-type_of TBool = "i1"
-type_of TVoid = "void"
+-- | True if the given expression is a literal
+is_literal :: Expr -> Bool
+is_literal (EInt _)    = True
+is_literal (EDouble _) = True
+is_literal (EBool _)   = True
+is_literal _           = False
 
--- | Retrieve the name of a global by a given number
+-- | Given a Type, return an LLVM type
+llvm_type :: Type -> String
+llvm_type TInt = "i32"
+llvm_type TDouble = "double"
+llvm_type TBool = "i1"
+llvm_type TVoid = "void"
+
+-- | Given an expression, return its’ LLVM type
+llvm_expr_type :: Expr -> String
+llvm_expr_type (ETyped t e) | is_literal e = llvm_type t
+llvm_expr_type (EString _) = "i8*"
+
+-- | Given a string, calculate its’ type
+llvm_string_type str = "[" ++ show (length str + 1) ++ " x i8]"
+
+-- | Retrieve the LLVM value of a literal expression
+llvm_value_of :: Expr -> String
+llvm_value_of e | is_literal e = value_of e
+ where
+   value_of (EInt x)    = show x
+   value_of (EDouble x) = show x
+   value_of (EBool LTrue)  = "true"
+   value_of (EBool LFalse) = "false"
 
 -- Code that DOES NOT emit stuff, but is dependent on LLVM:
 
