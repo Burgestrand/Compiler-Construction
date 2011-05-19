@@ -296,9 +296,19 @@ instance Compileable Expr where
     
   assemble (ETyped t (EMul e1 op e2)) = do
     let oper = case op of
-      Times -> "mul"
-      Div   -> "div"
-      Mod   -> "mod"
+                    Times -> "mul"
+                    Div   -> "div"
+                    Mod   -> "mod"
+    assemble e1
+    val1 <- pull
+    assemble e2
+    val2 <- pull
+    pushWithPrefix oper t (val1 ++ ", " ++ val2)
+    
+  assemble (ETyped t (EAdd e1 op e2)) = do
+    let oper = case op of
+                    Plus  -> "add"
+                    Minus -> "sub"
     assemble e1
     val1 <- pull
     assemble e2
