@@ -112,19 +112,23 @@ getFun = do
   fun <- gets count
   modify (\state -> state { count = fun + 1 }) -- Even more fun!
   return fun
-   
--- | Generates a temp var and sets it to the arg
-push t x = do
-  num <- getFun
-  emitCode ("%" ++ show num ++ " = " ++ (type_of t) ++ " " ++ x)
-  
+
 -- | Remembers the last fun value
 bookmark :: LLVM Integer
 bookmark = do
   num <- gets count
   return (num - 1)
 
-class Compileable x where
+-- | Retrieve the most recently generated variable
+pull = (\n -> "%var_" ++ show n) `fmap` bookmark
+   
+-- | Generates a temp var and sets it to the arg
+push t lit = do
+  num <- getFun
+  var <- pull
+  emitCode (var ++ " = " ++ (llvm_type t) ++ " " ++ llvm_value_of lit)
+
+class (Show x) => Compileable x where
   assemble :: x -> LLVM ()
 
 instance Compileable Definition where
@@ -132,14 +136,17 @@ instance Compileable Definition where
       -- Add this functions’ name to the global state:
       modify (\state -> state { function = name })
       
-      let llvm_returns = type_of returns
-      let llvm_name = "f_" ++ name
+      -- Readjust the output
+      let llvm_returns = llvm_type returns
+      let llvm_name = "@" ++ (name == "main" ? "" $ "f_") ++ name
       let llvm_args = args
+      
+      -- Finally emit function body
       pass $ do
-        emit $ "define " ++ llvm_returns ++ " @" ++ llvm_name ++ "()"
+        emit $ "define " ++ llvm_returns ++ " " ++ llvm_name ++ "()"
         emit "{"
-        label "entry"
-        name <- g_create "coolio"
+        putLabel "entry"
+        assemble code
         emit "}"
         
         globals <- gets globals
@@ -150,17 +157,48 @@ instance Compileable Definition where
       emit ""
     where
       g_declare (str, name) = concat
-        [name, " = internal constant[", show (length str + 1), " x i8] c\"", str ,"\\00\""]
+        [name, " = internal constant", llvm_string_type str ," c\"", str ,"\\00\""]
 
 instance Compileable Block where
-  assemble (Block code) = emit "*code*"
+  assemble (Block code) = mapM_ assemble code
   
 instance Compileable Statement where
   assemble (SEmpty) = undefined
   assemble (SExpr e)  = assemble e
   
+  assemble (SReturnV) = emit "ret void"
+  assemble (SReturn (ETyped t e)) | is_literal e = do
+    emit ("ret " ++ llvm_type t ++ " " ++ llvm_value_of e)
+  
+  assemble e = error ("implement assemble: " ++ show e)
+  
 instance Compileable Expr where
-  assemble (ETyped t (EInt i)) = push t (show i)
+  -- Literals
+  assemble (ETyped t e) | is_literal e = push t e
+  assemble (EString str) = do
+    g_var <- g_create str
+    num   <- getFun
+    var   <- pull
+    emit (var ++ " = getelementptr " ++ llvm_string_type str ++ "* " ++ g_var ++ ", i32 0, i32 0")
+  
+  assemble (ETyped t (ECall (Ident func) args)) = do
+      let prefix    = if builtin func then "" else "f_"
+      let llvm_name = "@" ++ prefix ++ func
+      
+      let arg_types = map llvm_expr_type args
+      arg_vars <- mapM (\x -> assemble x >> pull) args
+      let llvm_args = intercalate "," [ t ++ " " ++ v | (t, v) <- zip arg_types arg_vars]
+      
+      emit $ "call " ++ llvm_type t ++ " " ++ llvm_name ++ "(" ++ llvm_args ++ ")"
+    where
+      builtin "printString" = True
+      builtin "printInt"    = True
+      builtin "printDouble" = True
+      builtin "readInt"     = True
+      builtin "readDouble"  = True
+      builtin _ = False
+  
+  assemble e = error ("implement assemble: " ++ show e)
 
 --
 
