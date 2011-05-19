@@ -104,7 +104,7 @@ putLabel name = do
   
 -- | Branch to a label
 goto name = do
-  emitCode ("br " ++ name)
+  emitCode ("br label %" ++ name)
   modify (\state -> state { labelPlaced = False })
   
 -- | Generates a new number (for labels, vars or other fun stuff (where fun = consecutive)) 
