@@ -261,7 +261,9 @@ instance Compileable Statement where
     emitCode ("ret " ++ llvm_type t ++ " " ++ llvm_value_of e)
     modify (\state -> state { labelPlaced = False })
   
-  -- TODO Empty, Block, If, IfElse, While, Inc, Dec 
+  assemble (SEmpty) = return ()
+  
+  -- TODO Block, If, IfElse, While, Inc, Dec 
   
   assemble e = error ("implement assemble: " ++ show e)
   
