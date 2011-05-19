@@ -21,8 +21,9 @@ data Compilation = Compilation {
   -- | Name of the function (gives us function-local globals)
   function :: String,
 
-  -- | Lists all locals
-  locals :: [Ident],
+  -- | List of scopes containing the variables in that scope
+  -- NOTE: Could use Set for faster lookups
+  locals :: [[Ident]],
   
   -- | Label and temp counter
   count :: Integer,
@@ -57,7 +58,7 @@ llvm_type TVoid = "void"
 
 -- | Given an expression, return its’ LLVM type
 llvm_expr_type :: Expr -> String
-llvm_expr_type (ETyped t e) | is_literal e = llvm_type t
+llvm_expr_type (ETyped t e) = llvm_type t
 llvm_expr_type (EString _) = "i8*"
 
 -- | Given a string, calculate its’ type
@@ -108,6 +109,7 @@ goto name = do
   modify (\state -> state { labelPlaced = False })
   
 -- | Generates a new number (for labels, vars or other fun stuff (where fun = consecutive)) 
+getFun :: LLVM Integer
 getFun = do
   fun <- gets count
   modify (\state -> state { count = fun + 1 }) -- Even more fun!
@@ -115,7 +117,7 @@ getFun = do
 
 getLabel = do
   label <- getFun
-  return "lab_" ++ (show label)
+  return $ "lab_" ++ show label
 
 -- | Remembers the last fun value
 bookmark :: LLVM Integer
@@ -133,7 +135,34 @@ push t val = do
   where
     getVar = do
     name <- getFun
-    return "%var_" ++ (show name)
+    return $ "%var_" ++ show name
+
+-- | Stores the given literal expression in the target variable
+store :: Expr -> String -> LLVM ()
+store (ETyped t e) target | is_literal e = do
+  let instruction = "store " ++ llvm_type t ++ " " ++ llvm_value_of e
+  emitCode $ instruction ++ ", " ++ llvm_type t ++ "* " ++ target
+
+-- | Allocates memory for a of given type
+alloca :: String -> Type -> LLVM ()
+alloca name t = emit $ name ++ " = alloca " ++ llvm_type t
+
+-- | Retrieve the variable name of a true variable™
+-- 3xO(N) operations, use Array for 2xO(1) + O(log N) :D
+getIdent :: Ident -> LLVM String
+getIdent ident = do
+  scopeNo <- length `fmap` gets locals
+  locals <- last `fmap` gets locals
+  let localNo = fromJust (ident `elemIndex` locals)
+  return ("%var." ++ show scopeNo ++ "." ++ show localNo ++ ".ptr")
+
+-- | Put a new local temporär permanent variable into the current scope
+putIdent :: Ident -> LLVM String
+putIdent ident = do
+  scopes <- gets locals
+  let locals = last scopes ++ [ident]
+  modify (\state -> state { locals = init scopes ++ [locals] })
+  getIdent ident
 
 class (Show x) => Compileable x where
   assemble :: x -> LLVM ()
@@ -170,24 +199,35 @@ instance Compileable Block where
   assemble (Block code) = mapM_ assemble code
   
 instance Compileable Statement where
-  assemble (SEmpty) = undefined
   assemble (SExpr e)  = assemble e
+  assemble (SDeclaration t vars) = mapM_ declare vars
+    where
+      declare (DNoInit ident) = do
+          ptr <- putIdent ident
+          alloca ptr t
+          store (ETyped t (initial t)) ptr
+        where
+          initial (TDouble) = EDouble 0
+          initial (TInt)    = EInt 0
+          initial (TBool)   = EBool LFalse
   
-  assemble (SReturnV) = emit "ret void"
+  assemble (SReturnV) = emitCode "ret void"
   assemble (SReturn (ETyped t e)) | is_literal e = do
-    emit ("ret " ++ llvm_type t ++ " " ++ llvm_value_of e)
+    emitCode ("ret " ++ llvm_type t ++ " " ++ llvm_value_of e)
   
   assemble e = error ("implement assemble: " ++ show e)
   
 instance Compileable Expr where
+  assemble (ETyped t (EVar (Ident name))) = emitCode ("; eVar " ++ show name)
+  
   -- Literals
-  assemble (ETyped t e) | is_literal e = push t e
   assemble (EString str) = do
     g_var <- g_create str
     num   <- getFun
     var   <- pull
-    emit (var ++ " = getelementptr " ++ llvm_string_type str ++ "* " ++ g_var ++ ", i32 0, i32 0")
+    emitCode (var ++ " = getelementptr " ++ llvm_string_type str ++ "* " ++ g_var ++ ", i32 0, i32 0")
   
+  -- Function calls
   assemble (ETyped t (ECall (Ident func) args)) = do
       let prefix    = if builtin func then "" else "f_"
       let llvm_name = "@" ++ prefix ++ func
@@ -196,7 +236,7 @@ instance Compileable Expr where
       arg_vars <- mapM (\x -> assemble x >> pull) args
       let llvm_args = intercalate "," [ t ++ " " ++ v | (t, v) <- zip arg_types arg_vars]
       
-      emit $ "call " ++ llvm_type t ++ " " ++ llvm_name ++ "(" ++ llvm_args ++ ")"
+      emitCode $ "call " ++ llvm_type t ++ " " ++ llvm_name ++ "(" ++ llvm_args ++ ")"
     where
       builtin "printString" = True
       builtin "printInt"    = True
@@ -221,4 +261,4 @@ compile _ (Program fs) = header ++ "\n\n" ++ functions
         
 compiler :: (Compileable x) => x -> Code
 compiler x = intercalate "\n" $ execWriter $ runStateT (assemble x) state
-  where state = Compilation undefined [] 0 [] False
+  where state = Compilation undefined [[]] 0 [] False
