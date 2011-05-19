@@ -168,9 +168,9 @@ choose te e1 e2 = do
   pushWithPrefix "phi" (expr_type e1) cases 
   
 -- | Stores the given literal expression in the target variable
-store :: Expr -> String -> LLVM ()
-store (ETyped t e) target | is_literal e = do
-  let instruction = "store " ++ llvm_type t ++ " " ++ llvm_value_of e
+store :: Type -> String -> String -> LLVM ()
+store t target source = do
+  let instruction = "store " ++ llvm_type t ++ " " ++ source
   emitCode $ instruction ++ ", " ++ llvm_type t ++ "* " ++ target
 
 -- | Allocates memory for a of given type
@@ -230,12 +230,19 @@ instance Compileable Block where
   
 instance Compileable Statement where
   assemble (SExpr e)  = assemble e
+  
+  assemble (SAss ident e@(ETyped t _)) = do
+    assemble e
+    var <- getIdent ident
+    from <- pull
+    store t var from
+  
   assemble (SDeclaration t vars) = mapM_ declare vars
     where
       declare (DNoInit ident) = do
           ptr <- putIdent ident
           alloca ptr t
-          store (ETyped t (initial t)) ptr
+          store t ptr $ llvm_value_of (initial t)
         where
           initial (TDouble) = EDouble 0
           initial (TInt)    = EInt 0
@@ -252,7 +259,7 @@ instance Compileable Expr where
     ident <- getIdent ident
     pushWithPrefix "load" t ("* " ++ ident)
   
-  -- Literals
+  assemble (ETyped t e) | is_literal e = pushWithPrefix "add" t (llvm_value_of e ++ ", 0")
   assemble (EString str) = do
     g_var <- g_create str
     num   <- getFun
@@ -280,12 +287,12 @@ instance Compileable Expr where
   assemble (ETyped t (ENeg e)) = do
     assemble e
     val <- pull
-    pushWithPrefix "sub" t ("0 " ++ val)
+    pushWithPrefix "sub" t ("0, " ++ val)
   
   assemble (ETyped t (ENot e)) = do
     assemble e
     val <- pull
-    pushWithPrefix "sub" t ("1 " ++ val)
+    pushWithPrefix "sub" t ("1, " ++ val)
     
   assemble (ETyped t (EMul e1 op e2)) = do
     let oper = case op of
