@@ -73,6 +73,10 @@ llvm_value_of e | is_literal e = value_of e
    value_of (EBool LTrue)  = "true"
    value_of (EBool LFalse) = "false"
 
+-- | Given an expression return its’ type
+expr_type :: Expr -> Type
+expr_type (ETyped t _) = t
+
 -- Code that DOES NOT emit stuff, but is dependent on LLVM:
 
 -- | Given an integer, return the name of the global variable
