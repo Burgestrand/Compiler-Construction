@@ -1,2 +1,0 @@
-Documentation for our previous submission (#2) said that the submission
-is partial… which it isn’t. Sorry.
