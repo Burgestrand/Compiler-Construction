@@ -113,6 +113,10 @@ getFun = do
   modify (\state -> state { count = fun + 1 }) -- Even more fun!
   return fun
 
+getLabel = do
+  label <- getFun
+  return "lab_" ++ (show label)
+
 -- | Remembers the last fun value
 bookmark :: LLVM Integer
 bookmark = do
@@ -123,10 +127,13 @@ bookmark = do
 pull = (\n -> "%var_" ++ show n) `fmap` bookmark
    
 -- | Generates a temp var and sets it to the arg
-push t lit = do
-  num <- getFun
-  var <- pull
-  emitCode (var ++ " = " ++ (llvm_type t) ++ " " ++ llvm_value_of lit)
+push t val = do
+    var <- getVar
+    emitCode (var ++ " = " ++ (llvm_type t) ++ " " ++ val)
+  where
+    getVar = do
+    name <- getFun
+    return "%var_" ++ (show name)
 
 class (Show x) => Compileable x where
   assemble :: x -> LLVM ()
