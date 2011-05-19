@@ -97,7 +97,7 @@ emitCode x = do
   when lp (emit x)
 
 -- | Emit a label with a given name, jumping to it if nececery
-putlabel name = do
+putLabel name = do
   goto name
   emit (name ++ ":")
   modify (\state -> state { labelPlaced = True })
