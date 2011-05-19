@@ -287,7 +287,16 @@ instance Compileable Expr where
     val <- pull
     pushWithPrefix "sub" t ("1 " ++ val)
     
-  
+  assemble (ETyped t (EMul e1 op e2)) = do
+    let oper = case op of
+      Times -> "mul"
+      Div   -> "div"
+      Mod   -> "mod"
+    assemble e1
+    val1 <- pull
+    assemble e2
+    val2 <- pull
+    pushWithPrefix oper t (val1 ++ ", " ++ val2)
     
   assemble e = error ("implement assemble: " ++ show e)
   
