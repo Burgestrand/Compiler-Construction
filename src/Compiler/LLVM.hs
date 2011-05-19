@@ -308,8 +308,8 @@ instance Compileable Expr where
   assemble (ETyped t (EMul e1 op e2)) = do
     let oper = case op of
                     Times -> "mul"
-                    Div   -> "div"
-                    Mod   -> "mod"
+                    Div   -> "sdiv"
+                    Mod   -> "srem"
     assemble e1
     val1 <- pull
     assemble e2
