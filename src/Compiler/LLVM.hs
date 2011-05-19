@@ -139,7 +139,7 @@ pushWithPrefix p t val = do
   where
     getVar = do
     name <- getFun
-    return "%var_" ++ (show name)
+    return $ "%var_" ++ show name
     
 push = pushWithPrefix ""
     
@@ -164,9 +164,8 @@ choose te e1 e2 = do
   goto lab_end  
   
   putLabel lab_end
-  pushWithPrefix "phi" (llvm_expr_type e1) ("[" ++ true_val ++ ", %" 
-                        ++ lab_true ++ "], ["++ false_val ++ ", %" 
-                        ++ lab_false ++ "]" 
+  let cases = "[" ++ true_val ++ ", %" ++ lab_true ++ "], ["++ false_val ++ ", %" ++ lab_false ++ "]"
+  pushWithPrefix "phi" (expr_type e1) cases 
   
 -- | Stores the given literal expression in the target variable
 store :: Expr -> String -> LLVM ()
@@ -249,7 +248,9 @@ instance Compileable Statement where
   assemble e = error ("implement assemble: " ++ show e)
   
 instance Compileable Expr where
-  assemble (ETyped t (EVar (Ident name))) = emitCode ("; eVar " ++ show name)
+  assemble (ETyped t (EVar ident)) = do
+    ident <- getIdent ident
+    pushWithPrefix "load" t ("* " ++ ident)
   
   -- Literals
   assemble (EString str) = do
