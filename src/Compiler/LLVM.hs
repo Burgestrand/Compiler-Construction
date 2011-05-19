@@ -280,12 +280,14 @@ instance Compileable Expr where
   assemble (ETyped t (ENeg e)) = do
     assemble e
     val <- pull
-    push t ("0 - " ++ val)
+    push t ("sub 0 " ++ val)
   
   assemble (ETyped t (ENot e)) = do
     assemble e
     val <- pull
-    push t ("1 - " ++ val)
+    push t ("sub 1 " ++ val)
+    
+  assemble (ETyped t (EMul ))
     
   assemble e = error ("implement assemble: " ++ show e)
   
