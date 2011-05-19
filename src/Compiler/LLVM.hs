@@ -34,6 +34,11 @@ data Compilation = Compilation {
   labelPlaced :: Bool
 }
 
+-- General helper methods:
+infix 2 ?
+True  ? x = const x
+False ? x = id
+
 -- Code that does NOT emit stuff and is independent from LLVM:
 
 -- | Given a Type, return an LLVM type
