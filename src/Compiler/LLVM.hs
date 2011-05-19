@@ -277,7 +277,18 @@ instance Compileable Expr where
       builtin "readDouble"  = True
       builtin _ = False
   
+  assemble (ETyped t (ENeg e)) = do
+    assemble e
+    val <- pull
+    push t ("0 - " ++ val)
+  
+  assemble (ETyped t (ENot e)) = do
+    assemble e
+    val <- pull
+    push t ("1 - " ++ val)
+    
   assemble e = error ("implement assemble: " ++ show e)
+  
 
 --
 
