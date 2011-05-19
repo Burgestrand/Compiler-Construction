@@ -248,9 +248,14 @@ instance Compileable Statement where
           initial (TInt)    = EInt 0
           initial (TBool)   = EBool LFalse
   
-  assemble (SReturnV) = emitCode "ret void"
+  assemble (SReturnV) = do
+    emitCode "ret void" 
+    modify (\state -> state { labelPlaced = False })
   assemble (SReturn (ETyped t e)) | is_literal e = do
     emitCode ("ret " ++ llvm_type t ++ " " ++ llvm_value_of e)
+    modify (\state -> state { labelPlaced = False })
+  
+  -- TODO Empty, Block, If, IfElse, While, Inc, Dec 
   
   assemble e = error ("implement assemble: " ++ show e)
   
@@ -313,8 +318,10 @@ instance Compileable Expr where
     val1 <- pull
     assemble e2
     val2 <- pull
-    pushWithPrefix oper t (val1 ++ ", " ++ val2)
-    
+    pushWithPrefix oper t (val1 ++ ", " ++ val2)  
+  
+  -- TODO eq, cmp, and, or
+  
   assemble e = error ("implement assemble: " ++ show e)
   
 
