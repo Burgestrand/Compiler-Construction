@@ -129,14 +129,41 @@ bookmark = do
 pull = (\n -> "%var_" ++ show n) `fmap` bookmark
    
 -- | Generates a temp var and sets it to the arg
-push t val = do
+pushWithPrefix p t val = do
     var <- getVar
-    emitCode (var ++ " = " ++ (llvm_type t) ++ " " ++ val)
+    emitCode (var ++ " = " ++ p ++ " " ++ (llvm_type t) ++ " " ++ val)
   where
     getVar = do
     name <- getFun
-    return $ "%var_" ++ show name
-
+    return "%var_" ++ (show name)
+    
+push = pushWithPrefix ""
+    
+-- | Emits a test expr; chooses a expr to use and joins it...
+choose te e1 e2 = do
+  assemble te
+  test <- pull
+  lab_true <- getLabel
+  lab_false <- getLabel
+  lab_end <- getLabel
+  emitCode("br " ++ llvm_expr_type te ++ " " ++ test ++
+           ", label %" ++ lab_true ++ ", label %" ++ lab_false)
+  
+  putLabel lab_true
+  assemble e1
+  true_val <- pull
+  goto lab_end
+  
+  putLabel lab_false
+  assemble e2
+  false_val <- pull
+  goto lab_end  
+  
+  putLabel lab_end
+  pushWithPrefix "phi" (llvm_expr_type e1) ("[" ++ true_val ++ ", %" 
+                        ++ lab_true ++ "], ["++ false_val ++ ", %" 
+                        ++ lab_false ++ "]" 
+  
 -- | Stores the given literal expression in the target variable
 store :: Expr -> String -> LLVM ()
 store (ETyped t e) target | is_literal e = do
