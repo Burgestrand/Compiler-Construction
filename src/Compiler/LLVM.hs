@@ -215,6 +215,7 @@ instance Compileable Definition where
         emit "{"
         putLabel "entry"
         assemble code
+        when (returns == TVoid) (emit "ret void")
         emit "}"
         
         globals <- gets globals
