@@ -305,7 +305,12 @@ instance Compileable Expr where
       arg_vars <- mapM (\x -> assemble x >> pull) args
       let llvm_args = intercalate "," [ t ++ " " ++ v | (t, v) <- zip arg_types arg_vars]
       
-      emitCode $ "call " ++ llvm_type t ++ " " ++ llvm_name ++ "(" ++ llvm_args ++ ")"
+      let llvm_sig = " " ++ llvm_name ++ "(" ++ llvm_args ++ ")"
+      
+      if (t /= TVoid)
+        then pushWithPrefix "call" t llvm_sig
+        else emitCode ("call " ++ llvm_type t ++ llvm_sig)
+          
     where
       builtin "printString" = True
       builtin "printInt"    = True
