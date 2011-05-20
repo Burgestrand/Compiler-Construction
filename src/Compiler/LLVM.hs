@@ -319,15 +319,34 @@ instance Compileable Expr where
       builtin "readDouble"  = True
       builtin _ = False
   
-  assemble (ETyped t (ENeg e)) = do
-    assemble e
-    val <- pull
-    pushWithPrefix "sub" t ("0, " ++ val)
-  
+  -- Logic operations
   assemble (ETyped t (ENot e)) = do
     assemble e
     val <- pull
     pushWithPrefix "sub" t ("1, " ++ val)
+  
+  assemble (ETyped TBool (EEqu e1 op e2)) = do
+    assemble e1
+    e1var <- pull
+    
+    assemble e2
+    e2var <- pull
+    
+    let (ETyped tp _) = e1
+    let cmp = if op == EQU then "oeq" else "one"
+    let fn = if tp == TDouble then "fcmp" else "icmp"
+    
+    pushWithPrefix (fn ++ " " ++ cmp) tp (e1var ++ ", " ++ e2var)
+    
+    return ()
+  
+  -- TODO eq, cmp, and, or
+  
+  -- Arithmetic operations
+  assemble (ETyped t (ENeg e)) = do
+    assemble e
+    val <- pull
+    pushWithPrefix "sub" t ("0, " ++ val)
     
   assemble (ETyped t (EMul e1 op e2)) = do
     let oper = case op of
@@ -348,9 +367,7 @@ instance Compileable Expr where
     val1 <- pull
     assemble e2
     val2 <- pull
-    pushWithPrefix oper t (val1 ++ ", " ++ val2)  
-  
-  -- TODO eq, cmp, and, or
+    pushWithPrefix oper t (val1 ++ ", " ++ val2)
   
   assemble e = error ("implement assemble: " ++ show e)
   
