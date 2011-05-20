@@ -185,8 +185,8 @@ getIdent ident = do
     return ("%var." ++ show scopeNo ++ "." ++ show localNo ++ ".ptr")
   where
     find (scope:scopes) 
-      | ident `elem` scope = (0, fromJust $ ident `elemIndex` scope) 
-      | otherwise = case find scopes of (x, y) -> (x+1, y)
+      | ident `elem` scope = (length scopes, fromJust $ ident `elemIndex` scope) 
+      | otherwise = find scopes 
 
 -- | Put a new local temporär permanent variable into the current scope
 putIdent :: Ident -> LLVM String
