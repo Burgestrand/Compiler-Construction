@@ -40,6 +40,9 @@ infix 2 ?
 True  ? x = const x
 False ? x = id
 
+-- Guard but it takes the monadic action afterwards
+guardM bool m = guard (bool) >> m
+
 -- Code that does NOT emit stuff and is independent from LLVM:
 
 -- | True if the given expression is a literal
@@ -377,7 +380,7 @@ instance Compileable Expr where
       opOf LE  = "le"
       opOf GTH = "gt"
       opOf GE  = "ge"
-      prefix   = if tp /= TDouble then "s" else ""
+      prefix   = guardM (tp /= TDouble) "s"
   
   assemble (ETyped TBool (EAnd e1 e2)) = choose e1 e2 (ETyped TBool (EBool LFalse))
   assemble (ETyped TBool (EOr e1 e2))  = choose e1 (ETyped TBool (EBool LTrue)) e2
