@@ -231,13 +231,25 @@ instance Compileable Definition where
       -- Readjust the output
       let llvm_returns = llvm_type returns
       let llvm_name = "@" ++ (name == "main" ? "" $ "f_") ++ name
-      let llvm_args = args
+      
+      putted_args <- forM args $ \(Arg tp ident) -> do
+        var <- genVar
+        return (tp, var, ident)
+      
+      let llvm_args = intercalate "," $ map (\(tp, var, _) -> llvm_type tp ++ " " ++ var) putted_args
       
       -- Finally emit function body
       pass $ do
-        emit $ "define " ++ llvm_returns ++ " " ++ llvm_name ++ "()"
+        emit $ "define " ++ llvm_returns ++ " " ++ llvm_name ++ "(" ++ llvm_args ++ ")"
         emit "{"
         putLabel "entry"
+        
+        -- Copy the arguments to local scope
+        forM putted_args $ \(tp, var, ident) -> do
+          ptr <- putIdent ident
+          alloca ptr tp
+          store tp ptr var
+        
         assemble code
         emitCode (if returns == TVoid then "ret void" else "unreachable")
         emit "}"
@@ -282,8 +294,9 @@ instance Compileable Statement where
   assemble (SReturnV) = do
     emitCode "ret void" 
     modify (\state -> state { labelPlaced = False })
-  assemble (SReturn (ETyped t e)) | is_literal e = do
-    emitCode ("ret " ++ llvm_type t ++ " " ++ llvm_value_of e)
+  assemble (SReturn e@(ETyped t _)) = do
+    var <- asspull e
+    emitCode ("ret " ++ llvm_type t ++ " " ++ var)
     modify (\state -> state { labelPlaced = False })
   
   assemble (SEmpty) = return ()
