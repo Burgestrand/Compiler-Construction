@@ -341,7 +341,11 @@ instance Compileable Expr where
     ident <- getIdent ident
     pushWithPrefix "load" t ("* " ++ ident)
   
-  assemble (ETyped t e) | is_literal e = pushWithPrefix "add" t (llvm_value_of e ++ ", 0" ++ (guardM (t == TDouble) ".0"))
+  assemble (ETyped t e) | is_literal e = pushWithPrefix func t (llvm_value_of e ++ ", " ++ zero)
+    where
+      func = guardM (t == TDouble) "f" ++ "add"
+      zero = "0" ++ guardM (t == TDouble) ".0"
+  
   assemble (EString str) = do
     g_var <- g_create str
     num   <- getFun
