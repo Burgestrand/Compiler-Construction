@@ -178,13 +178,16 @@ alloca :: String -> Type -> LLVM ()
 alloca name t = emit $ name ++ " = alloca " ++ llvm_type t
 
 -- | Retrieve the variable name of a true variable™
--- 3xO(N) operations, use Array for 2xO(1) + O(log N) :D
 getIdent :: Ident -> LLVM String
 getIdent ident = do
-  scopeNo <- length `fmap` gets locals
-  locals <- last `fmap` gets locals
-  let localNo = fromJust (ident `elemIndex` locals)
-  return ("%var." ++ show scopeNo ++ "." ++ show localNo ++ ".ptr")
+    scopes <- gets locals
+    let (scopeNo, localNo) = find scopes
+    return ("%var." ++ show scopeNo ++ "." ++ show localNo ++ ".ptr")
+  where
+    find scopes = find' (length scopes - 1) scopes
+    find' scopeNo (locals:scopes) = maybe (find' (scopeNo-1) scopes) id $ do
+      index <- ident `elemIndex` locals
+      return (scopeNo, index)
 
 -- | Put a new local temporär permanent variable into the current scope
 putIdent :: Ident -> LLVM String
