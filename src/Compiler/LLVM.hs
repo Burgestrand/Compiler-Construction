@@ -131,6 +131,9 @@ bookmark = do
 
 -- | Retrieve the most recently generated variable
 pull = (\n -> "%var_" ++ show n) `fmap` bookmark
+
+-- | Assemble *and* pull
+asspull e = assemble e >> pull
    
 -- | Generates a temp var and sets it to the arg
 pushWithPrefix p t val = do
@@ -154,13 +157,11 @@ choose te e1 e2 = do
            ", label %" ++ lab_true ++ ", label %" ++ lab_false)
   
   putLabel lab_true
-  assemble e1
-  true_val <- pull
+  true_val <- asspull e1
   goto lab_end
   
   putLabel lab_false
-  assemble e2
-  false_val <- pull
+  false_val <- asspull e2
   goto lab_end  
   
   putLabel lab_end
@@ -195,6 +196,7 @@ putIdent ident = do
   let locals = last scopes ++ [ident]
   modify (\state -> state { locals = init scopes ++ [locals] })
   getIdent ident
+
 
 class (Show x) => Compileable x where
   assemble :: x -> LLVM ()
@@ -235,16 +237,14 @@ instance Compileable Statement where
   assemble (SExpr e)  = assemble e
   
   assemble (SAss ident e@(ETyped t _)) = do
-    assemble e
+    from <- asspull e
     var <- getIdent ident
-    from <- pull
     store t var from
   
   assemble (SDeclaration t vars) = mapM_ declare vars
     where
       declare (DInit   ident e) = do
-          assemble e
-          val <- pull
+          val <- asspull e
           ptr <- putIdent ident
           alloca ptr t
           store t ptr val
@@ -302,7 +302,7 @@ instance Compileable Expr where
       let llvm_name = "@" ++ prefix ++ func
       
       let arg_types = map llvm_expr_type args
-      arg_vars <- mapM (\x -> assemble x >> pull) args
+      arg_vars <- mapM asspull args
       let llvm_args = intercalate "," [ t ++ " " ++ v | (t, v) <- zip arg_types arg_vars]
       
       let llvm_sig = " " ++ llvm_name ++ "(" ++ llvm_args ++ ")"
@@ -321,31 +321,24 @@ instance Compileable Expr where
   
   -- Logic operations
   assemble (ETyped t (ENot e)) = do
-    assemble e
-    val <- pull
+    val <- asspull e
     pushWithPrefix "sub" t ("1, " ++ val)
   
   assemble (ETyped TBool (EEqu e1 op e2)) = do
-    assemble e1
-    e1var <- pull
-    
-    assemble e2
-    e2var <- pull
+    e1var <- asspull e1
+    e2var <- asspull e2
     
     let (ETyped tp _) = e1
     let cmp = if op == EQU then "oeq" else "one"
     let fn = if tp == TDouble then "fcmp" else "icmp"
     
     pushWithPrefix (fn ++ " " ++ cmp) tp (e1var ++ ", " ++ e2var)
-    
-    return ()
   
   -- TODO eq, cmp, and, or
   
   -- Arithmetic operations
   assemble (ETyped t (ENeg e)) = do
-    assemble e
-    val <- pull
+    val <- asspull e
     pushWithPrefix "sub" t ("0, " ++ val)
     
   assemble (ETyped t (EMul e1 op e2)) = do
@@ -353,20 +346,16 @@ instance Compileable Expr where
                     Times -> "mul"
                     Div   -> "sdiv"
                     Mod   -> "srem"
-    assemble e1
-    val1 <- pull
-    assemble e2
-    val2 <- pull
+    val1 <- asspull e1
+    val2 <- asspull e2
     pushWithPrefix oper t (val1 ++ ", " ++ val2)
     
   assemble (ETyped t (EAdd e1 op e2)) = do
     let oper = case op of
                     Plus  -> "add"
                     Minus -> "sub"
-    assemble e1
-    val1 <- pull
-    assemble e2
-    val2 <- pull
+    val1 <- asspull e1
+    val2 <- asspull e2
     pushWithPrefix oper t (val1 ++ ", " ++ val2)
   
   assemble e = error ("implement assemble: " ++ show e)
