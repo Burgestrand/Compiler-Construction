@@ -391,7 +391,7 @@ instance Compileable Expr where
     pushWithPrefix "sub" t ("0, " ++ val)
     
   assemble (ETyped t (EMul e1 op e2)) = do
-    let oper = ((t == TDouble) `guardM` "d") ++ 
+    let oper = ((t == TDouble) `guardM` "f") ++ 
                  case op of
                     Times -> "mul"
                     Div   -> "sdiv"
@@ -401,7 +401,7 @@ instance Compileable Expr where
     pushWithPrefix oper t (val1 ++ ", " ++ val2)
     
   assemble (ETyped t (EAdd e1 op e2)) = do
-    let oper = ((t == TDouble) `guardM` "d") ++ 
+    let oper = ((t == TDouble) `guardM` "f") ++ 
                   case op of
                     Plus  -> "add"
                     Minus -> "sub"
