@@ -148,8 +148,7 @@ push = pushWithPrefix ""
     
 -- | Emits a test expr; chooses a expr to use and joins it...
 choose te e1 e2 = do
-  assemble te
-  test <- pull
+  test <- asspull te
   lab_true <- getLabel
   lab_false <- getLabel
   lab_end <- getLabel
