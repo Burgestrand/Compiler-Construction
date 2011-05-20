@@ -371,12 +371,13 @@ instance Compileable Expr where
   -- Logic operations
   assemble (ETyped t (ENot e)) = asspull e >>= \x -> pushWithPrefix "sub" t ("1, " ++ x)
   assemble (ETyped TBool (EEqu e1 op e2)) = compareExpr e1 e2 (if op == EQU then "eq" else "ne")
-  assemble (ETyped TBool (ERel e1 op e2)) = compareExpr e1 e2 (opOf op)
+  assemble (ETyped TBool (ERel e1@(ETyped tp _) op e2)) = compareExpr e1 e2 (prefix ++ opOf op)
     where
-      opOf LTH = "slt"
-      opOf LE  = "sle"
-      opOf GTH = "sgt"
-      opOf GE  = "sge"
+      opOf LTH = "lt"
+      opOf LE  = "le"
+      opOf GTH = "gt"
+      opOf GE  = "ge"
+      prefix   = if tp /= TDouble then "s" else ""
   
   assemble (ETyped TBool (EAnd e1 e2)) = choose e1 e2 (ETyped TBool (EBool LFalse))
   assemble (ETyped TBool (EOr e1 e2))  = choose e1 (ETyped TBool (EBool LTrue)) e2
