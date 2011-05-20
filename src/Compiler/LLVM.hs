@@ -265,8 +265,24 @@ instance Compileable Statement where
     modify (\state -> state { labelPlaced = False })
   
   assemble (SEmpty) = return ()
-  
-  -- TODO Block, If, IfElse, While, Inc, Dec 
+    
+  assemble (SBlock b) = do
+    modify (\state -> state { locals = (locals state) ++ [[]] })
+    assemble b
+    modify (\state -> state { locals = init (locals state)})
+    
+  assemble (SInc id) = assemble (
+                         SAss id $
+                           ETyped TInt $ EAdd (ETyped TInt (EInt 1)) 
+                                              Plus
+                                              (ETyped TInt (EVar id)))
+                                              
+  assemble (SDec id) = assemble (
+                         SAss id $
+                           ETyped TInt $ EAdd (ETyped TInt (EInt 1)) 
+                                              Minus
+                                              (ETyped TInt (EVar id)))
+  -- TODO If, IfElse, While 
   
   assemble e = error ("implement assemble: " ++ show e)
   
