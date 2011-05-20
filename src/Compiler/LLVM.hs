@@ -113,7 +113,7 @@ goto name = do
   modify (\state -> state { labelPlaced = False })
  
 gotoif test name1 name2 = do
-  emitCode ("br i1 " ++ test ++ ", " ++ name1 ++ ", " ++ name2)
+  emitCode ("br i1 " ++ test ++ ", label %" ++ name1 ++ ", label %" ++ name2)
   modify (\state -> state { labelPlaced = False })
   
   
@@ -232,7 +232,7 @@ instance Compileable Definition where
         emit "{"
         putLabel "entry"
         assemble code
-        when (returns == TVoid) (emit "ret void")
+        emitCode (if returns == TVoid then "ret void" else "unreachable")
         emit "}"
         
         globals <- gets globals
