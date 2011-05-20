@@ -381,16 +381,14 @@ instance Compileable Expr where
   assemble (ETyped TBool (EAnd e1 e2)) = choose e1 e2 (ETyped TBool (EBool LFalse))
   assemble (ETyped TBool (EOr e1 e2))  = choose e1 (ETyped TBool (EBool LTrue)) e2
   
-  
-  -- TODO eq, cmp, and, or
-  
   -- Arithmetic operations
   assemble (ETyped t (ENeg e)) = do
     val <- asspull e
     pushWithPrefix "sub" t ("0, " ++ val)
     
   assemble (ETyped t (EMul e1 op e2)) = do
-    let oper = case op of
+    let oper = ((t == TDouble) `guardM` "d") ++ 
+                 case op of
                     Times -> "mul"
                     Div   -> "sdiv"
                     Mod   -> "srem"
@@ -399,7 +397,8 @@ instance Compileable Expr where
     pushWithPrefix oper t (val1 ++ ", " ++ val2)
     
   assemble (ETyped t (EAdd e1 op e2)) = do
-    let oper = case op of
+    let oper = ((t == TDouble) `guardM` "d") ++ 
+                  case op of
                     Plus  -> "add"
                     Minus -> "sub"
     val1 <- asspull e1
