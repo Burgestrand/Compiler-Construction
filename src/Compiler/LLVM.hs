@@ -111,6 +111,11 @@ putLabel name = do
 goto name = do
   emitCode ("br label %" ++ name)
   modify (\state -> state { labelPlaced = False })
+ 
+gotoif test name1 name2 = do
+  emitCode ("br i1 " ++ test ++ ", " ++ name1 ++ ", " ++ name2)
+  modify (\state -> state { labelPlaced = False })
+  
   
 -- | Generates a new number (for labels, vars or other fun stuff (where fun = consecutive)) 
 getFun :: LLVM Integer
@@ -284,7 +289,41 @@ instance Compileable Statement where
   assemble (SInc id) = desugarincdec id Plus
                                               
   assemble (SDec id) = desugarincdec id Minus
-  -- TODO If, IfElse, While 
+  
+  assemble (SIfElse e stm1 stm2) = do
+    lab_true <- getLabel
+    lab_false <- getLabel
+    lab_end <- getLabel
+    assemble e
+    test <- pull
+    gotoif test lab_true lab_false
+    
+    putLabel lab_true
+    assemble stm1
+    goto lab_end
+  
+    putLabel lab_false
+    assemble stm2
+    goto lab_end  
+    
+    putLabel lab_end
+  
+  assemble (SIf e stm) = assemble (SIfElse e stm SEmpty)
+  
+  assemble (SWhile e stm) = do
+    lab_test <- getLabel
+    lab_body <- getLabel
+    lab_end <- getLabel
+    putLabel lab_test
+    assemble e
+    test <- pull
+    gotoif test lab_body lab_end
+    
+    putLabel lab_body
+    assemble stm
+    goto lab_test
+    
+    putLabel lab_end 
   
   assemble e = error ("implement assemble: " ++ show e)
   
