@@ -136,6 +136,10 @@ bookmark :: LLVM Integer
 bookmark = do
   num <- gets count
   return (num - 1)
+  
+genVar = do
+  getFun
+  pull
 
 -- | Retrieve the most recently generated variable
 pull = (\n -> "%var_" ++ show n) `fmap` bookmark
