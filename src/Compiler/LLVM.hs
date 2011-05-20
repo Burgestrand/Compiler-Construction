@@ -408,15 +408,18 @@ instance Compileable Expr where
   
   -- Arithmetic operations
   assemble (ETyped t (ENeg e)) = do
-    val <- asspull e
-    pushWithPrefix "sub" t ("0, " ++ val)
+      val <- asspull e
+      pushWithPrefix func t (zero ++ ", " ++ val)
+    where zero = "0" ++ guardM (t == TDouble) ".0"
+          func = guardM (t == TDouble) "f" ++ "sub"
     
   assemble (ETyped t (EMul e1 op e2)) = do
-    let oper = ((t == TDouble) `guardM` "f") ++ 
+    let oper = (if t == TDouble then "f" else (guardM (op /= Times) "s")) ++ 
                  case op of
                     Times -> "mul"
-                    Div   -> "sdiv"
-                    Mod   -> "srem"
+                    Div   -> "div"
+                    Mod   -> "rem"
+    
     val1 <- asspull e1
     val2 <- asspull e2
     pushWithPrefix oper t (val1 ++ ", " ++ val2)
