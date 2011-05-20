@@ -268,21 +268,19 @@ instance Compileable Statement where
     assemble b
     modify (\state -> state { locals = init (locals state)})
     
-  assemble (SInc id) = assemble (
-                         SAss id $
-                           ETyped TInt $ EAdd (ETyped TInt (EInt 1)) 
-                                              Plus
-                                              (ETyped TInt (EVar id)))
+  assemble (SInc id) = desugarincdec id Plus
                                               
-  assemble (SDec id) = assemble (
-                         SAss id $
-                           ETyped TInt $ EAdd (ETyped TInt (EInt 1)) 
-                                              Minus
-                                              (ETyped TInt (EVar id)))
+  assemble (SDec id) = desugarincdec id Minus
   -- TODO If, IfElse, While 
   
   assemble e = error ("implement assemble: " ++ show e)
   
+desugarincdec id op  = assemble (
+                         SAss id $
+                           ETyped TInt $ EAdd (ETyped TInt (EVar id)) 
+                                              op
+                                              (ETyped TInt (EInt 1)))
+
 instance Compileable Expr where
   assemble (ETyped t (EVar ident)) = do
     ident <- getIdent ident
