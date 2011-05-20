@@ -197,6 +197,17 @@ putIdent ident = do
   modify (\state -> state { locals = init scopes ++ [locals] })
   getIdent ident
 
+-- | Compare two operands with a given operation
+compareExpr :: Expr -> Expr -> String -> LLVM ()
+compareExpr e1@(ETyped tp _) e2 op = do
+  e1var <- asspull e1
+  e2var <- asspull e2
+  
+  let fn  = if tp == TDouble then "fcmp" else "icmp"
+  let pre = if tp == TDouble then "o" else ""
+  let cmp = pre ++ op
+  
+  pushWithPrefix (fn ++ " " ++ cmp) tp (e1var ++ ", " ++ e2var)
 
 class (Show x) => Compileable x where
   assemble :: x -> LLVM ()
@@ -320,19 +331,14 @@ instance Compileable Expr where
       builtin _ = False
   
   -- Logic operations
-  assemble (ETyped t (ENot e)) = do
-    val <- asspull e
-    pushWithPrefix "sub" t ("1, " ++ val)
-  
-  assemble (ETyped TBool (EEqu e1 op e2)) = do
-    e1var <- asspull e1
-    e2var <- asspull e2
-    
-    let (ETyped tp _) = e1
-    let cmp = if op == EQU then "oeq" else "one"
-    let fn = if tp == TDouble then "fcmp" else "icmp"
-    
-    pushWithPrefix (fn ++ " " ++ cmp) tp (e1var ++ ", " ++ e2var)
+  assemble (ETyped t (ENot e)) = asspull e >>= \x -> pushWithPrefix "sub" t ("1, " ++ x)
+  assemble (ETyped TBool (EEqu e1 op e2)) = compareExpr e1 e2 (if op == EQU then "eq" else "ne")
+  assemble (ETyped TBool (ERel e1 op e2)) = compareExpr e1 e2 (opOf op)
+    where
+      opOf LTH = "slt"
+      opOf LE  = "sle"
+      opOf GTH = "sgt"
+      opOf GE  = "sge"
   
   -- TODO eq, cmp, and, or
   
