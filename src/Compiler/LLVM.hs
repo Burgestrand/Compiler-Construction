@@ -181,7 +181,7 @@ alloca name t = emit $ name ++ " = alloca " ++ llvm_type t
 getIdent :: Ident -> LLVM String
 getIdent ident = do
     scopes <- gets locals
-    let (scopeNo, localNo) = find scopes
+    let (scopeNo, localNo) = find (reverse scopes)
     return ("%var." ++ show scopeNo ++ "." ++ show localNo ++ ".ptr")
   where
     find (scope:scopes) 
