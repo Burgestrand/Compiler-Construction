@@ -262,8 +262,14 @@ instance Compileable Statement where
     modify (\state -> state { labelPlaced = False })
   
   assemble (SEmpty) = return ()
-  
-  -- TODO Block, If, IfElse, While, Inc, Dec 
+    
+  assemble (SBlock b) = do
+    modify (\state -> state { locals = (locals state) ++ [[]] })
+    assemble b
+    modify (\state -> state { locals = init (locals state)})
+    
+    
+  -- TODO If, IfElse, While, Inc, Dec 
   
   assemble e = error ("implement assemble: " ++ show e)
   
