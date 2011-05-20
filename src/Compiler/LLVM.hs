@@ -340,6 +340,10 @@ instance Compileable Expr where
       opOf GTH = "sgt"
       opOf GE  = "sge"
   
+  assemble (ETyped TBool (EAnd e1 e2)) = choose e1 e2 (ETyped TBool (EBool LFalse))
+  assemble (ETyped TBool (EOr e1 e2))  = choose e1 (ETyped TBool (EBool LTrue)) e2
+  
+  
   -- TODO eq, cmp, and, or
   
   -- Arithmetic operations
