@@ -22,8 +22,8 @@ data Compilation = Compilation {
   function :: String,
 
   -- | List of scopes containing the variables in that scope
-  -- NOTE: Could use Set for faster lookups
-  locals :: [[Ident]],
+  -- NOTE: Could use Map for faster lookups
+  locals :: [[(Ident, String)]],
   
   -- | Label and temp counter
   count :: Integer,
@@ -193,20 +193,18 @@ alloca name t = emit $ name ++ " = alloca " ++ llvm_type t
 getIdent :: Ident -> LLVM String
 getIdent ident = do
     scopes <- gets locals
-    let (scopeNo, localNo) = find (reverse scopes)
-    return ("%var." ++ show scopeNo ++ "." ++ show localNo ++ ".ptr")
+    return $ find (reverse scopes)
   where
-    find (scope:scopes) 
-      | ident `elem` scope = (length scopes, fromJust $ ident `elemIndex` scope) 
-      | otherwise = find scopes 
+    find (scope:scopes) = maybe (find scopes) id (lookup ident scope)
 
 -- | Put a new local temporär permanent variable into the current scope
 putIdent :: Ident -> LLVM String
 putIdent ident = do
-  scopes <- gets locals
-  let locals = last scopes ++ [ident]
+  varname <- genVar
+  scopes  <- gets locals
+  let locals  = last scopes ++ [(ident, varname)]
   modify (\state -> state { locals = init scopes ++ [locals] })
-  getIdent ident
+  return varname
 
 -- | Compare two operands with a given operation
 compareExpr :: Expr -> Expr -> String -> LLVM ()
