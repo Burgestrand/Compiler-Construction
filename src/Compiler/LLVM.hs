@@ -32,7 +32,7 @@ data Compilation = Compilation {
   globals :: [String],
   
   -- | Can generate code?
-  labelPlaced :: Bool
+  labelPlaced :: Maybe String
 }
 
 -- General helper methods:
@@ -102,24 +102,27 @@ emit x = tell [x]
 -- | Emit a bit of code iff it's possible
 emitCode x = do
   lp <- gets labelPlaced
-  when lp (emit x)
+  when (isJust lp) (emit x)
 
 -- | Emit a label with a given name, jumping to it if nececery
 putLabel name = do
   goto name
   emit (name ++ ":")
-  modify (\state -> state { labelPlaced = True })
+  setLabel (Just name)
   
 -- | Branch to a label
 goto name = do
   emitCode ("br label %" ++ name)
-  modify (\state -> state { labelPlaced = False })
+  setLabel Nothing
  
 gotoif test name1 name2 = do
   emitCode ("br i1 " ++ test ++ ", label %" ++ name1 ++ ", label %" ++ name2)
-  modify (\state -> state { labelPlaced = False })
-  
-  
+  setLabel Nothing
+
+-- | Set the value of “labelPlaced” environment variable
+setLabel value = modify (\state -> state { labelPlaced = value })
+lastLabel = fromJust `fmap` gets labelPlaced
+
 -- | Generates a new number (for labels, vars or other fun stuff (where fun = consecutive)) 
 getFun :: LLVM Integer
 getFun = do
@@ -164,15 +167,17 @@ choose te e1 e2 = do
   lab_true <- getLabel
   lab_false <- getLabel
   lab_end <- getLabel
-  emitCode("br " ++ llvm_expr_type te ++ " " ++ test ++
-           ", label %" ++ lab_true ++ ", label %" ++ lab_false)
+  
+  gotoif test lab_true lab_false
   
   putLabel lab_true
   true_val <- asspull e1
+  lab_true <- lastLabel
   goto lab_end
   
   putLabel lab_false
   false_val <- asspull e2
+  lab_false <- lastLabel
   goto lab_end  
   
   putLabel lab_end
@@ -187,7 +192,7 @@ store t target source = do
 
 -- | Allocates memory for a of given type
 alloca :: String -> Type -> LLVM ()
-alloca name t = emit $ name ++ " = alloca " ++ llvm_type t
+alloca name t = emitCode $ name ++ " = alloca " ++ llvm_type t
 
 -- | Retrieve the variable name of a true variable™
 getIdent :: Ident -> LLVM String
@@ -291,11 +296,12 @@ instance Compileable Statement where
   
   assemble (SReturnV) = do
     emitCode "ret void" 
-    modify (\state -> state { labelPlaced = False })
+    setLabel Nothing
+    
   assemble (SReturn e@(ETyped t _)) = do
     var <- asspull e
     emitCode ("ret " ++ llvm_type t ++ " " ++ var)
-    modify (\state -> state { labelPlaced = False })
+    setLabel Nothing
   
   assemble (SEmpty) = return ()
     
@@ -448,4 +454,4 @@ compile _ (Program fs) = header ++ "\n\n" ++ functions
         
 compiler :: (Compileable x) => x -> Code
 compiler x = intercalate "\n" $ execWriter $ runStateT (assemble x) state
-  where state = Compilation undefined [[]] 0 [] False
+  where state = Compilation undefined [[]] 0 [] Nothing
